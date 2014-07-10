@@ -1,4 +1,4 @@
-android-task1_1
+android-task1_2
 ===============
 
 ## 题目描述
@@ -14,15 +14,21 @@ android-task1_1
 以神庙逃亡2为例，抓取地址
 
 http://m.wandoujia.com/apps/com.imangi.templerun2
+
 ![神庙逃亡](http://img.wdjimg.com/mms/screenshot/c/91/b591ffb0d34db8a5775a6e90a9c2091c_320_533.jpeg)
 
 抓取的信息有下列几点：
 
 图标地址：http://img.wdjimg.com/mms/icon/v1/d/6a/2a3464e218409b2bd251591bc3ce06ad_48_48.png
+
 名称：神庙逃亡2：Temple Run 2
+
 类型：动作竞技 
+
 大小：25.15M
+
 下载次数：1126万次安装
+
 应用描述：
 微信是一款手机通信软件，支持通过手机网络发送语音…...
 
