@@ -6,6 +6,7 @@ ELWG安卓学习小组任务提交处
 * 将你们完成的项目放到以姓名全拼命名的文件夹里面，命名如：`huyang`。注意：**这里是公共的repo，大家不要修改别人的文件夹或整个项目结构**
 * 每个项目一个文件夹，命名如：`huyang/task1_1`
 * [task1_1](https://github.com/ITEC-ELWG/android-tasks/blob/master/task1_1.md)
+* [tsak1_2](https://github.com/ITEC-ELWG/android-tasks/blob/master/task1_2.md)
 * [任务反馈说明](https://github.com/ITEC-ELWG/android-tasks/blob/master/feedback.md)
 
 
