@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">便签</string>
+    <string name="edite">编辑</string>
+    <string name="menu_add">新建</string>
+    <string name="menu_delete">删除</string>
+    <string name="menu_color">颜色</string>
+    <string name="menu_select_all">全选</string>
+    <string name="select_item">选择</string>
+    <string name="items_selected">项已选</string>
+</resources>
