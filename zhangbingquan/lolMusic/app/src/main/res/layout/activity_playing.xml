@@ -1,0 +1,155 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/white"
+    tools:context="com.HandleStudio.lolmusic.lolmusic.PlayingActivity">
+
+    <FrameLayout
+        android:id="@+id/albumpic_and_lrc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <ImageView
+            android:id="@+id/album_picture"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/picture0"/>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/playing_console"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_margin="@dimen/playing_console_margin">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/playing_song_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/playing_song_title"
+                android:text="@string/test_text"/>
+            <TextView
+                android:id="@+id/playing_song_artist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/playing_song_title"
+                android:layout_marginTop="@dimen/playing_song_artist_margin_top"
+                android:textSize="@dimen/playing_song_artist"
+                android:text="@string/test_text"/>
+            <ImageView
+                android:id="@+id/playing_song_order"
+                android:layout_width="@dimen/playing_song_order_width"
+                android:layout_height="@dimen/playing_song_order_height"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/order"
+                />
+        </RelativeLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/playing_song_play_pre_nex_margin_top">
+           <TextView
+               android:id="@+id/playing_song_now_duration"
+               android:layout_width="@dimen/playing_song_duration"
+               android:layout_height="wrap_content"
+               android:layout_gravity="center"
+               android:textSize="@dimen/playing_song_artist"
+               android:text="@string/test_duration"/>
+           <SeekBar
+               android:id="@+id/playing_song_seek_bar"
+               android:layout_width="0dp"
+               android:layout_height="wrap_content"
+               android:layout_weight="1"
+               />
+           <TextView
+               android:id="@+id/playing_song_duration"
+               android:layout_width="@dimen/playing_song_duration"
+               android:layout_height="wrap_content"
+               android:layout_gravity="center_vertical"
+               android:gravity="right"
+               android:textSize="@dimen/playing_song_artist"
+               android:text="@string/test_duration"/>
+        </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/playing_song_play_pre_nex_margin_left_right"
+            android:layout_marginRight="@dimen/playing_song_play_pre_nex_margin_left_right"
+            android:layout_marginTop="@dimen/playing_song_play_pre_nex_margin_top">
+            <FrameLayout
+                android:layout_width="@dimen/playing_song_pre_next"
+                android:layout_height="@dimen/playing_song_pre_next"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true">
+
+                <com.HandleStudio.lolmusic.lolmusic.CircleDrawView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:diameter="@dimen/playing_song_pre_next"/>
+
+                <Button
+                    android:id="@+id/playing_song_pre"
+                    android:layout_width="@dimen/playing_song_pre_next_button_width"
+                    android:layout_height="@dimen/playing_song_pre_next_button_height"
+                    android:layout_gravity="center"
+                    android:layout_marginRight="@dimen/playing_song_pre_next_margin"
+                    android:background="@drawable/pre"/>
+
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="@dimen/playing_song_play_pause"
+                android:layout_height="@dimen/playing_song_play_pause"
+                android:layout_centerInParent="true">
+
+                <com.HandleStudio.lolmusic.lolmusic.CircleDrawView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:diameter="@dimen/playing_song_play_pause"
+                    />
+                <Button
+                    android:id="@+id/playing_song_play_pause"
+                    android:layout_width="@dimen/playing_song_play_pause_button"
+                    android:layout_height="@dimen/playing_song_play_pause_button"
+                    android:background="@drawable/pause"
+                    android:layout_gravity="center"/>
+
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="@dimen/playing_song_pre_next"
+                android:layout_height="@dimen/playing_song_pre_next"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true">
+
+                <com.HandleStudio.lolmusic.lolmusic.CircleDrawView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:diameter="@dimen/playing_song_pre_next"
+                    />
+                <Button
+                    android:id="@+id/playing_song_next"
+                    android:layout_width="@dimen/playing_song_pre_next_button_width"
+                    android:layout_height="@dimen/playing_song_pre_next_button_height"
+                    android:layout_marginLeft="@dimen/playing_song_pre_next_margin"
+                    android:background="@drawable/next"
+                    android:layout_gravity="center"/>
+
+            </FrameLayout>
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
