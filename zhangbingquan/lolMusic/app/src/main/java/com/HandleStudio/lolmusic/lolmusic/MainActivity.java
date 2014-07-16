@@ -19,27 +19,26 @@ import android.widget.ListView;
 public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
-    private int actionBarTitleColor;
-    private int headerHeight;
+    int actionBarTitleColor;
+    int headerHeight;
     private int minHeaderTranslation;
     private ListView listView;
-    private KenBurnsView headerPicture;
+    KenBurnsView headerPicture;
     private ImageView headerLogo;
     private View header;
     private View placeHolderView;
     private AccelerateDecelerateInterpolator smoothInterpolator;
 
     //辅助矩形，1是大头像，2是小头像
-    private RectF mRect1 = new RectF();
-    private RectF mRect2 = new RectF();
+    private RectF rect1 = new RectF();
+    private RectF rect2 = new RectF();
 
     //ActionBar的标题透明
     private AlphaForegroundColorSpan mAlphaForegroundColorSpan;
     private SpannableString mSpannableString;
 
-    private FileSearchHelper fileSearchHelper;
+    FileSearchHelper fileSearchHelper;
     private DimensHelper dimensHelper;
-    private Intent serviceIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +79,7 @@ public class MainActivity extends Activity {
     }
 
     private void startPlayingService(){
-        serviceIntent = new Intent();
+        Intent serviceIntent = new Intent();
         serviceIntent.setAction("com.HandleStudio.lolmusic.lolmusic.PlayingService");
         startService(serviceIntent);
     }
@@ -148,14 +147,14 @@ public class MainActivity extends Activity {
 
     //动画的路径和缩放大小
     private void interpolate(View view1, View view2, float interpolation) {
-        getOnScreenRect(mRect1, view1);
-        getOnScreenRect(mRect2, view2);
+        getOnScreenRect(rect1, view1);
+        getOnScreenRect(rect2, view2);
 
-        float scaleX = 1.0F + interpolation * (mRect2.width() / mRect1.width() - 1.0F);
-        float scaleY = 1.0F + interpolation * (mRect2.height() / mRect1.height() - 1.0F);
-        float translationX = 0.5F * (interpolation * (mRect2.left + mRect2.right - mRect1.left - mRect1.right));
-        float translationY = 0.5F * (interpolation * (mRect2.top + mRect2.bottom - mRect1.top - mRect1.bottom
-                                    + dimensHelper.getStatusBarHeight() + dimensHelper.getLackOfKitkatHeight(mRect2)));
+        float scaleX = 1.0F + interpolation * (rect2.width() / rect1.width() - 1.0F);
+        float scaleY = 1.0F + interpolation * (rect2.height() / rect1.height() - 1.0F);
+        float translationX = 0.5F * (interpolation * (rect2.left + rect2.right - rect1.left - rect1.right));
+        float translationY = 0.5F * (interpolation * (rect2.top + rect2.bottom - rect1.top - rect1.bottom
+                                    + dimensHelper.getStatusBarHeight() + dimensHelper.getLackOfKitkatHeight(rect2)));
 
         view1.setTranslationX(translationX);
         view1.setTranslationY(translationY - header.getTranslationY());

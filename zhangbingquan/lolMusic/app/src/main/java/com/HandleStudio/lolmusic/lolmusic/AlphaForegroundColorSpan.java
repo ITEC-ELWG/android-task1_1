@@ -13,11 +13,6 @@ public class AlphaForegroundColorSpan extends ForegroundColorSpan {
         super(color);
 	}
 
-    public AlphaForegroundColorSpan(Parcel src) {
-        super(src);
-        alpha = src.readFloat();
-    }
-
     public void writeToParcel(Parcel dest, int flags) {
         super.writeToParcel(dest, flags);
         dest.writeFloat(alpha);
@@ -30,10 +25,6 @@ public class AlphaForegroundColorSpan extends ForegroundColorSpan {
 
     public void setAlpha(float alpha) {
         this.alpha = alpha;
-    }
-
-    public float getAlpha() {
-        return alpha;
     }
 
     private int getAlphaColor() {

@@ -43,14 +43,15 @@
                 android:layout_marginTop="@dimen/playing_song_artist_margin_top"
                 android:textSize="@dimen/playing_song_artist"
                 android:text="@string/test_text"/>
-            <ImageView
-                android:id="@+id/playing_song_order"
-                android:layout_width="@dimen/playing_song_order_width"
-                android:layout_height="@dimen/playing_song_order_height"
+
+            <com.HandleStudio.lolmusic.lolmusic.ModeIconDrawView
+                android:id="@+id/modeIconDrawView"
+                android:layout_width="32dp"
+                android:layout_height="23dp"
                 android:layout_alignParentRight="true"
                 android:layout_centerVertical="true"
-                android:background="@drawable/order"
-                />
+                android:clickable="true"/>
+
         </RelativeLayout>
 
         <LinearLayout
