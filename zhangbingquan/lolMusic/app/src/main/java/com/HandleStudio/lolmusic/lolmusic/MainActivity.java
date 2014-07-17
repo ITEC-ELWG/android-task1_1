@@ -14,6 +14,7 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 
 public class MainActivity extends Activity {
@@ -23,11 +24,11 @@ public class MainActivity extends Activity {
     int headerHeight;
     private int minHeaderTranslation;
     private ListView listView;
-    KenBurnsView headerPicture;
     private ImageView headerLogo;
     private View header;
     private View placeHolderView;
     private AccelerateDecelerateInterpolator smoothInterpolator;
+    KenBurnsView headerPicture;
 
     //辅助矩形，1是大头像，2是小头像
     private RectF rect1 = new RectF();
@@ -43,39 +44,56 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
+        initMinHeaderTranslation();
+        initFindView();
+        initAlphaTitleParams();
+        initActionBar();
+        initListView();
+        startPlayingService();
+
+        headerLogo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (PlayingService.position>=0){
+                    Intent intent = new Intent(MainActivity.this, PlayingActivity.class);
+                    startActivity(intent);
+                }
+                else Toast.makeText(MainActivity.this,"当前没有正在播放的歌曲",Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        if (PlayingService.position == -1)
+            headerPicture.setResourceIds(R.raw.album_pic_default, R.raw.album_pic_default);
+        else headerPicture.setImageBitmap(PlayingActivity.bitmap,PlayingActivity.bitmap);
+    }
+
+    private void initMinHeaderTranslation(){
         dimensHelper = new DimensHelper(this);
         smoothInterpolator = new AccelerateDecelerateInterpolator();
         headerHeight = getResources().getDimensionPixelSize(R.dimen.header_height);
         //HeaderView高度减去ActionBar的高度得到最多能卷动的距离
         minHeaderTranslation = -headerHeight + dimensHelper.getActionBarHeight()+ dimensHelper.getStatusBarHeight();
 
-        setContentView(R.layout.activity_main);
+    }
 
-        listView = (ListView) findViewById(R.id.listview);
-        header = findViewById(R.id.header);
-        headerPicture = (KenBurnsView) findViewById(R.id.header_picture);
-        headerPicture.setResourceIds(R.drawable.picture0, R.drawable.picture1);
-        headerLogo = (ImageView) findViewById(R.id.header_logo);
-
-        headerLogo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, PlayingActivity.class);
-                startActivity(intent);
-            }
-        });
-
+    private void initAlphaTitleParams(){
         //todo: color protect(1dp drop shadow)
         actionBarTitleColor = getResources().getColor(R.color.actionbar_title_color);
-
         mSpannableString = new SpannableString(getString(R.string.now_playing_name));
         mAlphaForegroundColorSpan = new AlphaForegroundColorSpan(actionBarTitleColor);
+    }
 
-        initActionBar();
-        initListView();
-
-        startPlayingService();
+    private void initFindView(){
+        listView = (ListView) findViewById(R.id.listview);
+        header = findViewById(R.id.header);
+        headerLogo = (ImageView) findViewById(R.id.header_logo);
+        headerPicture = (KenBurnsView) findViewById(R.id.header_picture);
     }
 
     private void startPlayingService(){
@@ -84,8 +102,6 @@ public class MainActivity extends Activity {
         startService(serviceIntent);
     }
 
-
-    //Action Bar 初始化，获得并设置图标
     private void initActionBar() {
         ActionBar actionBar = getActionBar();
         actionBar.setIcon(R.drawable.ic_transparent);

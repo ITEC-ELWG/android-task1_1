@@ -3,6 +3,7 @@ package com.HandleStudio.lolmusic.lolmusic;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -19,6 +20,7 @@ public class KenBurnsView extends FrameLayout {
 
     private final Handler mHandler;
     private int[] mResourceIds;
+    private Bitmap[] imageBitmap;
     private ImageView[] mImageViews;
     private int mActiveImageIndex = -1;
 
@@ -48,11 +50,6 @@ public class KenBurnsView extends FrameLayout {
     public KenBurnsView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mHandler = new Handler();
-    }
-
-    public void setResourceIds(int... resourceIds) {
-        mResourceIds = resourceIds;
-        fillImageViews();
     }
 
     private void swapImage() {
@@ -137,8 +134,26 @@ public class KenBurnsView extends FrameLayout {
     }
 
     private void fillImageViews() {
-        for (int i = 0; i < mImageViews.length; i++) {
-            mImageViews[i].setImageResource(mResourceIds[i]);
+        if (PlayingService.position==-1) {
+            for (int i = 0; i < mImageViews.length; i++) {
+                mImageViews[i].setImageResource(mResourceIds[i]);
+            }
+        }
+        else {
+            for (int i = 0; i < mImageViews.length; i++) {
+                mImageViews[i].setImageBitmap(imageBitmap[i]);
+            }
         }
     }
+
+    public void setResourceIds(int... resourceIds) {
+        mResourceIds = resourceIds;
+        fillImageViews();
+    }
+
+    public void setImageBitmap(Bitmap... params){
+        imageBitmap = params;
+        fillImageViews();
+    }
+
 }

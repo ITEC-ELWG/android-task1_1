@@ -5,11 +5,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.ImageView;
+
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -35,6 +39,7 @@ public class PlayingService extends Service {
     public static final String ACTION_UPDATE_CURRENT_MUSIC = "com.HandleStudio.lolmusic.lolmusic.UPDATE_CURRENT_MUSIC";
     public static final String ACTION_UPDATE_MODE = "com.HandleStudio.lolmusic.lolmusic.UPDATE_MODE";
     public static final String ACTION_UPDATE_PLAY_PAUSE = "com.HandleStudio.lolmusic.lolmusic.UPDATE_PLAY_PAUSE";
+    public static final String ACTION_UPDATE_ALBUM_COVER = "com.HandleStudio.lolmusic.lolmusic.UPDATE_ALBUM_COVER";
 
 
     private ControlReceiver receiver;
@@ -122,6 +127,7 @@ public class PlayingService extends Service {
             notifyMode();
             notifyPlayOrPause();
             notifyCurrentMusic();
+            notifyAlbumCover();
         }
         else {
             timer.cancel();
@@ -134,6 +140,7 @@ public class PlayingService extends Service {
             notifyMode();
             notifyPlayOrPause();
             notifyCurrentMusic();
+            notifyAlbumCover();
         }
     }
 
@@ -195,9 +202,10 @@ public class PlayingService extends Service {
 
     public void onFinishToNext(){
         switch (playMode){
-            case MODE_RANDOM:
-                position = getRandomPosition();
+
+            case MODE_ONE_LOOP:
                 begin(position);
+                break;
 
             case MODE_ALL_LOOP:
                 if (position == (fileSearchHelper.getFileCount() - 1)) {
@@ -205,15 +213,40 @@ public class PlayingService extends Service {
                 }
                 else position++;
                 begin(position);
+                break;
+
+            case MODE_RANDOM:
+                position = getRandomPosition();
+                begin(position);
+                break;
 
             case MODE_SEQUENCE:
                 if (position != (fileSearchHelper.getFileCount() - 1)) {
                     position++;
                     begin(position);
                 }
-
-            case MODE_ONE_LOOP:
-                begin(position);
+                else {
+                    mediaPlayer = new MediaPlayer();
+                    mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                    try {
+                        mediaPlayer.setDataSource(fileSearchHelper.getFilePath(position));
+                        mediaPlayer.prepare();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    notifyState();
+                    mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer mediaPlayer) {
+                            timer.cancel();
+                            mediaPlayer.release();
+                            PlayingService.this.mediaPlayer = null;
+                            playState = false;
+                            onFinishToNext();
+                        }
+                    });
+                }
+                break;
         }
     }
 
@@ -279,20 +312,18 @@ public class PlayingService extends Service {
         notifyPlayOrPause();
         notifyCurrentMusic();
         notifyMode();
+        notifyAlbumCover();
         startProgress();//notifyDuration,notifyProgress
     }
 
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-
-    @Override
-    public void onDestroy(){
-        super.onDestroy();
-        unregisterReceiver(receiver);
+    public void notifyAlbumCover(){
+        Intent intent = new Intent();
+        intent.setAction(ACTION_UPDATE_ALBUM_COVER);
+        Bundle bundle = new Bundle();
+        bundle.putInt("songId",fileSearchHelper.getFileSongId(position));
+        bundle.putInt("albumId", fileSearchHelper.getFileAlbumId(position));
+        intent.putExtra("extra", bundle);
+        sendBroadcast(intent);
     }
 
     public String timeTransform(int minute, int second){
@@ -328,6 +359,16 @@ public class PlayingService extends Service {
         return  (int)(Math.random()*(fileSearchHelper.getFileCount()-1));
     }
 
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        unregisterReceiver(receiver);
+    }
 
 }

@@ -6,18 +6,26 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.DisplayMetrics;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -29,29 +37,37 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
     private static final String TAG = "PlayingActivity";
 
-    private FrameLayout layoutAlbumPicAndLrc;
     private DimensHelper dimensHelper;
     private BroadcastDeliverHelper bdHelper;
 
     private PlayingActivityReceiver receiver;
     private int mode = PlayingService.MODE_SEQUENCE;
     private int position;
+    private static int nextPosition;
+    private boolean isChanging = false;
     boolean playState=true;
 
-    private SeekBar seekBar;
+    private FrameLayout layoutAlbumPicAndLrc;
+    private ModeIconDrawView modeIconDrawView;
     private TextView textTitle;
     private TextView textArtist;
     private TextView textNowDuration;
     private TextView textDuration;
-    private Button btnPlayAndPause;
-    Button btnPre;
-    Button btnNext;
-    ModeIconDrawView modeIconDrawView;
+    private FrameLayout fakeBtnPlayAndPause;
+    private FrameLayout fakeBtnPre;
+    private FrameLayout fakeBtnNext;
+    private CircleDrawView circleDrawPre;
+    private CircleDrawView circleDrawPlayPause;
+    private CircleDrawView circleDrawNext;
+    private ImageView btnPlayPause;
+    private ImageView btnPre;
+    private ImageView btnNxet;
+    private SeekBar seekBar;
+    private ImageView imageAlbumCover;
 
-    //播放控制
-    private boolean isChanging = false;
-
-
+    public static Bitmap bitmap;
+    private Handler handler;
+    private final int invalidateColor = 0x1234;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,9 +77,10 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         //init
         dimensHelper = new DimensHelper(this);
         bdHelper = new BroadcastDeliverHelper(this);
+        initHandler();
         initActionBar();
         initFindView();
-        initAlbumPicAndLrcHeight();//画方形
+        initAlbumCoverAndLrcHeight();//画方形
 
         //获得歌曲在数组的顺序
         Intent intent = getIntent();
@@ -78,6 +95,7 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         filter.addAction(PlayingService.ACTION_UPDATE_MODE);
         filter.addAction(PlayingService.ACTION_UPDATE_DURATION);//总时间
         filter.addAction(PlayingService.ACTION_UPDATE_PROGRESS);//进度条
+        filter.addAction(PlayingService.ACTION_UPDATE_ALBUM_COVER);
         receiver = new PlayingActivityReceiver();
         registerReceiver(receiver,filter);
     }
@@ -93,11 +111,11 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
                 playAndPauseIcon = intent.getIntExtra("extra",1);
                 if (playAndPauseIcon==1) {
                     playState = true;
-                    btnPlayAndPause.setBackgroundResource(R.drawable.pause);
+                    btnPlayPause.setBackgroundResource(R.drawable.pause);
                 }
                 else {
                     playState = false;
-                    btnPlayAndPause.setBackgroundResource(R.drawable.play);
+                    btnPlayPause.setBackgroundResource(R.drawable.play);
                 }
             }
 
@@ -109,6 +127,8 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
             if (action.equals(PlayingService.ACTION_UPDATE_MODE)){
                 mode = intent.getIntExtra("extra",PlayingService.MODE_SEQUENCE);
+                modeIconDrawView.changeModeIcon(mode);
+                modeIconDrawView.invalidate();
             }
 
             if (action.equals(PlayingService.ACTION_UPDATE_DURATION)){
@@ -121,6 +141,17 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
                 Bundle bundle = intent.getBundleExtra("extra");
                 textNowDuration.setText(bundle.getString("currentTime"));
                 if (!isChanging) seekBar.setProgress(bundle.getInt("currentDuration"));
+            }
+
+            if (action.equals(PlayingService.ACTION_UPDATE_ALBUM_COVER)){
+                Bundle bundle = intent.getBundleExtra("extra");
+                int songId = bundle.getInt("songId");
+                int albumId = bundle.getInt("albumId");
+                bitmap = AlbumCoverFinder.getAlbumCover(PlayingActivity.this,songId,albumId,true);
+                imageAlbumCover.setImageBitmap(bitmap);
+                Runnable runnableChangeColor = new ChangeColor();
+                Thread threadChangeColor = new Thread(runnableChangeColor);
+                threadChangeColor.start();
             }
 
         }
@@ -156,6 +187,19 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
     }
 
 
+    public void initHandler(){
+        handler = new Handler(){
+          @Override
+          public void handleMessage(Message msg){
+              if (msg.what==invalidateColor){
+                  circleDrawPre.invalidate();
+                  circleDrawNext.invalidate();
+                  circleDrawPlayPause.invalidate();
+                  modeIconDrawView.invalidate();
+              }
+          }
+        };
+    }
 
     public void initActionBar(){
         ActionBar actionBar = getActionBar();
@@ -164,31 +208,41 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         actionBar.setHomeButtonEnabled(true);
     }
 
+
     public void initFindView(){
         layoutAlbumPicAndLrc = (FrameLayout) findViewById(R.id.albumpic_and_lrc);
-        btnPlayAndPause = (Button) findViewById(R.id.playing_song_play_pause);
-        btnPre = (Button) findViewById(R.id.playing_song_pre);
-        btnNext = (Button) findViewById(R.id.playing_song_next);
+        fakeBtnPlayAndPause = (FrameLayout) findViewById(R.id.playing_song_play_pause);
+        fakeBtnPre = (FrameLayout) findViewById(R.id.playing_song_pre);
+        fakeBtnNext = (FrameLayout) findViewById(R.id.playing_song_next);
+        circleDrawPre = (CircleDrawView) findViewById(R.id.circle_draw_view_1);
+        circleDrawPlayPause = (CircleDrawView) findViewById(R.id.circle_draw_view_2);
+        circleDrawNext = (CircleDrawView) findViewById(R.id.circle_draw_view_3);
+        btnPlayPause = (ImageView)findViewById(R.id.btn_play_pause);
+        btnPre = (ImageView)findViewById(R.id.btn_pre);
+        btnNxet = (ImageView)findViewById(R.id.btn_next);
         seekBar = (SeekBar) findViewById(R.id.playing_song_seek_bar);
         textTitle = (TextView) findViewById(R.id.playing_song_title);
         textArtist = (TextView) findViewById(R.id.playing_song_artist);
         textNowDuration = (TextView) findViewById(R.id.playing_song_now_duration);
         textDuration = (TextView) findViewById(R.id.playing_song_duration);
         modeIconDrawView = (ModeIconDrawView) findViewById(R.id.modeIconDrawView);
+        imageAlbumCover = (ImageView) findViewById(R.id.album_picture);
+
 
         seekBar.setOnSeekBarChangeListener(new MySeekBar());
-        btnPlayAndPause.setOnClickListener(this);
-        btnPre.setOnClickListener(this);
-        btnNext.setOnClickListener(this);
+        fakeBtnPlayAndPause.setOnClickListener(this);
+        fakeBtnPre.setOnClickListener(this);
+        fakeBtnNext.setOnClickListener(this);
         modeIconDrawView.setOnClickListener(this);
     }
 
-    public void initAlbumPicAndLrcHeight(){
+
+    public void initAlbumCoverAndLrcHeight(){
         DisplayMetrics dm = new DisplayMetrics();
         WindowManager wm = PlayingActivity.this.getWindowManager();
         wm.getDefaultDisplay().getMetrics(dm);
         ViewGroup.LayoutParams params = layoutAlbumPicAndLrc.getLayoutParams();
-        params.height = dm.widthPixels + dimensHelper.getStatusBarHeight();
+        params.height = dm.widthPixels;
         layoutAlbumPicAndLrc.setLayoutParams(params);
     }
 
@@ -235,19 +289,26 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         registerUIReceiver();
     }
 
+
     @Override
     public void onResume(){
         super.onResume();
+
+        //开始播放或加载当前播放状态
         if(position==-1||position==PlayingService.position) {
             bdHelper.broadcastDeliver(PlayingService.CONTROL_ASK_FOR_STATE);
         }
         else bdHelper.broadcastDeliver(PlayingService.CONTROL_BEGIN, position);
+
+        //改变按钮颜色
     }
+
 
     @Override
     public void onPause(){
         super.onPause();
     }
+
 
     @Override
     public void onStop(){
@@ -255,14 +316,34 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         unregisterReceiver(receiver);
     }
 
+
     @Override
     public void onDestroy(){
         super.onDestroy();
     }
 
+
     public void showTip(String s){
         Toast.makeText(PlayingActivity.this, s, Toast.LENGTH_SHORT).show();
     }
+
+    public class ChangeColor implements Runnable{
+        @Override
+        public void run(){
+            List<int[]> result = new ArrayList<int[]>();
+            try {
+                result = PicMainColorHelper.compute(bitmap, 5);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            int[] RGBMainColor = result.get(0);
+            int intColor = Color.rgb(RGBMainColor[0],RGBMainColor[1],RGBMainColor[2]);
+            CircleDrawView.color = intColor;
+            ModeIconDrawView.color = intColor;
+            handler.sendEmptyMessage(invalidateColor);
+        }
+    }
+
 
 }
 

@@ -19,6 +19,7 @@ public class ModeIconDrawView extends View {
     private Paint paintLine;
     private Paint paintTriangle;
     private int mode = PlayingService.MODE_SEQUENCE;
+    public static int color = Color.BLACK;
 
     public ModeIconDrawView(Context context,AttributeSet set) {
         super(context,set);
@@ -33,13 +34,13 @@ public class ModeIconDrawView extends View {
 
         paintLine = new Paint();
         paintLine.setAntiAlias(true);                       //设置画笔为无锯齿
-        paintLine.setColor(Color.BLACK);                    //设置画笔颜色
+        paintLine.setColor(color);                    //设置画笔颜色
         paintLine.setStrokeWidth((float) 5.0);              //线宽
         paintLine.setStyle(Paint.Style.STROKE);
 
         paintTriangle = new Paint();
         paintTriangle.setAntiAlias(true);
-        paintTriangle.setColor(Color.BLACK);
+        paintTriangle.setColor(color);
         paintTriangle.setStyle(Paint.Style.FILL);
 
         switch (mode){
@@ -88,7 +89,7 @@ public class ModeIconDrawView extends View {
         allLoop(canvas);
         Paint paintText = new Paint();
         paintText.setAntiAlias(true);
-        paintText.setColor(Color.BLACK);
+        paintText.setColor(color);
         paintText.setTextSize(20);
         canvas.drawText("1",30,30F,paintText);
 
