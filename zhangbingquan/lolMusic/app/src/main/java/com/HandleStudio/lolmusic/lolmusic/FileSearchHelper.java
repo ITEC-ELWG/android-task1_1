@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +27,7 @@ public class FileSearchHelper {
     public static String[] path;     //存放音乐文件的路径数组
     public static String[] fileName; //存音乐文件的文件名数组，做title备用
     public static int[] albumId;
+    public static int[] size;
 
     private String[] queryItem =
         {
@@ -46,7 +48,7 @@ public class FileSearchHelper {
     }
 
     public void fileSearch(){
-        cursor = context.getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,queryItem,null,null,null);
+        cursor = context.getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,queryItem,MediaStore.Audio.Media.SIZE+">500000",null,null);
         cursor.moveToFirst();
         count = cursor.getCount();
         ids = new int[count];
@@ -56,6 +58,7 @@ public class FileSearchHelper {
         path = new String[count];
         fileName = new String[count];
         albumId = new int[count];
+        size = new int[count];
         for(int i=0;i<count;i++){
             ids[i] = cursor.getInt(0);
             titles[i] = cursor.getString(1);/*Log.i("cursor",titles[i]);*/
@@ -118,8 +121,8 @@ public class FileSearchHelper {
                 viewHolder = (ViewHolder)convertView.getTag();
             }
             viewHolder.listTitle.setText(titles[position]);
-            viewHolder.listArtist.setText(artist[position]);
-            viewHolder.listDuration.setText(duration[position][0]+":"+duration[position][1]);
+            viewHolder.listArtist.setText("   -   "+artist[position]);
+            viewHolder.listDuration.setText(timeTransform(duration[position][0],duration[position][1]));
             return convertView;
         }
 
@@ -137,5 +140,13 @@ public class FileSearchHelper {
         return adapter;
     }
 
+    public String timeTransform(int minute, int second){
+        String mm,ss;
+        if (minute<10) mm = "0" + minute;
+        else mm = String.valueOf(minute);
+        if (second<10) ss = "0" + second;
+        else ss = String.valueOf(second);
+        return mm+":"+ss;
+    }
 
 }

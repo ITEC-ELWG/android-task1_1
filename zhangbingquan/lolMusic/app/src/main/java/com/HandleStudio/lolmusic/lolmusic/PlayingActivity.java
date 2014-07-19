@@ -6,10 +6,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.util.DisplayMetrics;
 import android.view.Menu;
@@ -43,7 +45,6 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
     private PlayingActivityReceiver receiver;
     private int mode = PlayingService.MODE_SEQUENCE;
     private int position;
-    private static int nextPosition;
     private boolean isChanging = false;
     boolean playState=true;
 
@@ -67,7 +68,12 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
     public static Bitmap bitmap;
     private Handler handler;
-    private final int invalidateColor = 0x1234;
+    private static final int defaultColor = -3354940;
+    private final int msgInvalidateColor = 0x1234;
+    private static int newThreadFlag = 0;
+
+    private SharedPreferences preferences;
+    private SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +91,9 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         //获得歌曲在数组的顺序
         Intent intent = getIntent();
         position = intent.getIntExtra("index",-1);
+
+        preferences = getSharedPreferences("lolmusic",MODE_PRIVATE);
+        editor = preferences.edit();
     }
 
 
@@ -149,9 +158,26 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
                 int albumId = bundle.getInt("albumId");
                 bitmap = AlbumCoverFinder.getAlbumCover(PlayingActivity.this,songId,albumId,true);
                 imageAlbumCover.setImageBitmap(bitmap);
-                Runnable runnableChangeColor = new ChangeColor();
-                Thread threadChangeColor = new Thread(runnableChangeColor);
-                threadChangeColor.start();
+                if (!AlbumCoverFinder.defaultCover) {
+                    int currentColor = preferences.getInt(String.valueOf(songId),0);
+                    if (currentColor==0) {
+                        Runnable runnableChangeColor = new ChangeColor(songId,newThreadFlag);
+                        Thread threadChangeColor = new Thread(runnableChangeColor);
+                        threadChangeColor.start();
+                    }
+                    else {
+                        CircleDrawView.color = currentColor;
+                        ModeIconDrawView.color = currentColor;
+                        handler.sendEmptyMessage(msgInvalidateColor);
+                    }
+                }
+                else {
+                    CircleDrawView.color = defaultColor;
+                    ModeIconDrawView.color = defaultColor;
+                    handler.sendEmptyMessage(msgInvalidateColor);
+                }
+
+
             }
 
         }
@@ -169,10 +195,12 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
             case R.id.playing_song_pre:
                 bdHelper.broadcastDeliver(PlayingService.CONTROL_PRE);
+                newThreadFlag = (int)(Math.random()*10);
                 break;
 
             case R.id.playing_song_next:
                 bdHelper.broadcastDeliver(PlayingService.CONTROL_NEXT);
+                newThreadFlag = (int)(Math.random()*10);
                 break;
 
             case R.id.modeIconDrawView:
@@ -191,7 +219,7 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         handler = new Handler(){
           @Override
           public void handleMessage(Message msg){
-              if (msg.what==invalidateColor){
+              if (msg.what==msgInvalidateColor){
                   circleDrawPre.invalidate();
                   circleDrawNext.invalidate();
                   circleDrawPlayPause.invalidate();
@@ -328,6 +356,15 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
     }
 
     public class ChangeColor implements Runnable{
+
+        int songId;
+        int newThreadFlag;
+
+        public ChangeColor(int sid,int flag){
+            songId = sid;
+            newThreadFlag = flag;
+        }
+
         @Override
         public void run(){
             List<int[]> result = new ArrayList<int[]>();
@@ -340,7 +377,10 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
             int intColor = Color.rgb(RGBMainColor[0],RGBMainColor[1],RGBMainColor[2]);
             CircleDrawView.color = intColor;
             ModeIconDrawView.color = intColor;
-            handler.sendEmptyMessage(invalidateColor);
+            if ((newThreadFlag!=0)&&(newThreadFlag == PlayingActivity.newThreadFlag))
+                handler.sendEmptyMessage(msgInvalidateColor);
+            editor.putInt(String.valueOf(songId),intColor);
+            editor.commit();
         }
     }
 

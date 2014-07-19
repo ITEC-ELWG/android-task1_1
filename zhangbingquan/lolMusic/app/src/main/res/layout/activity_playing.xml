@@ -28,20 +28,26 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
+
             <TextView
                 android:id="@+id/playing_song_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:singleLine="true"
                 android:textSize="@dimen/playing_song_title"
-                android:text="@string/test_text"/>
+                android:maxEms="15"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="1"
+                android:focusableInTouchMode="true"
+                android:focusable="true"/>
+
             <TextView
                 android:id="@+id/playing_song_artist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/playing_song_title"
                 android:layout_marginTop="@dimen/playing_song_artist_margin_top"
-                android:textSize="@dimen/playing_song_artist"
-                android:text="@string/test_text"/>
+                android:textSize="@dimen/playing_song_artist"/>
 
             <com.HandleStudio.lolmusic.lolmusic.ModeIconDrawView
                 android:id="@+id/modeIconDrawView"
@@ -63,8 +69,7 @@
                android:layout_width="@dimen/playing_song_duration"
                android:layout_height="wrap_content"
                android:layout_gravity="center"
-               android:textSize="@dimen/playing_song_artist"
-               android:text="@string/test_duration"/>
+               android:textSize="@dimen/playing_song_artist"/>
            <SeekBar
                android:id="@+id/playing_song_seek_bar"
                android:layout_width="0dp"
@@ -77,8 +82,7 @@
                android:layout_height="wrap_content"
                android:layout_gravity="center_vertical"
                android:gravity="right"
-               android:textSize="@dimen/playing_song_artist"
-               android:text="@string/test_duration"/>
+               android:textSize="@dimen/playing_song_artist"/>
         </LinearLayout>
 
         <RelativeLayout

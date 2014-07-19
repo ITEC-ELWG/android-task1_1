@@ -5,13 +5,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.ImageView;
 
 import java.io.IOException;
 import java.util.Timer;
@@ -41,13 +39,15 @@ public class PlayingService extends Service {
     public static final String ACTION_UPDATE_PLAY_PAUSE = "com.HandleStudio.lolmusic.lolmusic.UPDATE_PLAY_PAUSE";
     public static final String ACTION_UPDATE_ALBUM_COVER = "com.HandleStudio.lolmusic.lolmusic.UPDATE_ALBUM_COVER";
 
-
     private ControlReceiver receiver;
     private FileSearchHelper fileSearchHelper;
     private BroadcastDeliverHelper bdhelp;
 
     //播放控制
     public static int position = -1;
+    private static int nextAutoPosition =-1;
+    private static int nextManualPosition =-1;
+    private static int preManualPosition =-1;
     private int currentTime;
     private MediaPlayer mediaPlayer;
     private boolean playState = false;
@@ -104,6 +104,7 @@ public class PlayingService extends Service {
 
             if (action.equals(CONTROL_MODE)){
                 playMode = intent.getIntExtra("extra",MODE_SEQUENCE);
+                nextPosition();
                 Log.e(TAG,String.valueOf(playMode));
             }
 
@@ -124,10 +125,8 @@ public class PlayingService extends Service {
         if (!playState) {
             play();
             playState = true;
-            notifyMode();
-            notifyPlayOrPause();
-            notifyCurrentMusic();
-            notifyAlbumCover();
+            notifyFourItem();
+            nextPosition();
         }
         else {
             timer.cancel();
@@ -137,10 +136,8 @@ public class PlayingService extends Service {
             mediaPlayer = null;
             play();
             playState = true;
-            notifyMode();
-            notifyPlayOrPause();
-            notifyCurrentMusic();
-            notifyAlbumCover();
+            notifyFourItem();
+            nextPosition();
         }
     }
 
@@ -189,47 +186,20 @@ public class PlayingService extends Service {
     }
 
     public void toNext(){
-        if(playMode==MODE_RANDOM){
-            position = getRandomPosition();
-        }
-        else {
-            if (position == (fileSearchHelper.getFileCount() - 1)) {
-                position = 0;
-            } else position++;
-        }
-        begin(position);
+        begin(nextManualPosition);
     }
 
     public void onFinishToNext(){
         switch (playMode){
-
-            case MODE_ONE_LOOP:
-                begin(position);
-                break;
-
-            case MODE_ALL_LOOP:
-                if (position == (fileSearchHelper.getFileCount() - 1)) {
-                    position = 0;
-                }
-                else position++;
-                begin(position);
-                break;
-
-            case MODE_RANDOM:
-                position = getRandomPosition();
-                begin(position);
-                break;
-
             case MODE_SEQUENCE:
                 if (position != (fileSearchHelper.getFileCount() - 1)) {
-                    position++;
-                    begin(position);
+                    begin(nextAutoPosition);
                 }
                 else {
                     mediaPlayer = new MediaPlayer();
                     mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
                     try {
-                        mediaPlayer.setDataSource(fileSearchHelper.getFilePath(position));
+                        mediaPlayer.setDataSource(fileSearchHelper.getFilePath(nextAutoPosition));
                         mediaPlayer.prepare();
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -247,20 +217,66 @@ public class PlayingService extends Service {
                     });
                 }
                 break;
+            default:
+                begin(nextAutoPosition);
         }
     }
 
     public void toPrevious(){
-        if(playMode==MODE_RANDOM){
-            position = getRandomPosition();
-        }
-        else {
-            if (position == 0) {
-                position = fileSearchHelper.getFileCount() - 1;
-            } else position--;
-        }
-        begin(position);
+        begin(preManualPosition);
     }
+
+
+    public void nextPosition(){
+
+            switch (playMode) {
+                case MODE_ONE_LOOP:
+                    nextAutoPosition = position;
+                    break;
+
+                case MODE_ALL_LOOP:
+                    if (position == (fileSearchHelper.getFileCount() - 1)) {
+                        nextAutoPosition = 0;
+                    } else nextAutoPosition = position + 1;
+                    break;
+
+                case MODE_RANDOM:
+                    nextAutoPosition = getRandomPosition();
+                    break;
+
+                case MODE_SEQUENCE:
+                    if (position != (fileSearchHelper.getFileCount() - 1)) {
+                        nextAutoPosition = position + 1;
+                    } else {
+                        nextAutoPosition = position;
+                    }
+                    break;
+            }
+
+            switch (playMode){
+                case MODE_RANDOM:
+                    nextManualPosition = getRandomPosition();
+                    preManualPosition = getRandomPosition();
+                    break;
+                default:
+                    if (position == (fileSearchHelper.getFileCount() - 1)) {
+                        nextManualPosition = 0;
+                    }
+                    else nextManualPosition = position + 1;
+
+                    if (position == 0){
+                        preManualPosition = fileSearchHelper.getFileCount() - 1;
+                    }
+                    else {
+                        preManualPosition = position - 1;
+                    }
+                    break;
+            }
+    }
+
+    /**
+     * notify UI component
+     */
 
     public void notifyMode(){
         bdhelp.broadcastDeliver(ACTION_UPDATE_MODE,playMode);
@@ -307,14 +323,6 @@ public class PlayingService extends Service {
         sendBroadcast(intent);
     }
 
-    public void notifyState(){
-        timer.cancel();
-        notifyPlayOrPause();
-        notifyCurrentMusic();
-        notifyMode();
-        notifyAlbumCover();
-        startProgress();//notifyDuration,notifyProgress
-    }
 
     public void notifyAlbumCover(){
         Intent intent = new Intent();
@@ -326,6 +334,7 @@ public class PlayingService extends Service {
         sendBroadcast(intent);
     }
 
+
     public String timeTransform(int minute, int second){
         String mm,ss;
         if (minute<10) mm = "0" + minute;
@@ -335,6 +344,18 @@ public class PlayingService extends Service {
         return mm+":"+ss;
     }
 
+    public void notifyFourItem(){
+        notifyPlayOrPause();
+        notifyCurrentMusic();
+        notifyMode();
+        notifyAlbumCover();
+    }
+
+    public void notifyState(){
+        timer.cancel();
+        notifyFourItem();
+        startProgress();//notifyDuration,notifyProgress
+    }
 
 
     public void startProgress(){
@@ -343,13 +364,15 @@ public class PlayingService extends Service {
         timerTask = new TimerTask() {
             @Override
             public void run() {
-                currentTime = mediaPlayer.getCurrentPosition()/1000;
-                int minute = currentTime/60;
-                int second = currentTime%60;
-                Bundle bundle = new Bundle();
-                bundle.putString("currentTime",timeTransform(minute,second));
-                bundle.putInt("currentDuration",mediaPlayer.getCurrentPosition());
-                notifyProgress(bundle);
+                if (mediaPlayer!=null) {
+                    currentTime = mediaPlayer.getCurrentPosition() / 1000;
+                    int minute = currentTime / 60;
+                    int second = currentTime % 60;
+                    Bundle bundle = new Bundle();
+                    bundle.putString("currentTime", timeTransform(minute, second));
+                    bundle.putInt("currentDuration", mediaPlayer.getCurrentPosition());
+                    notifyProgress(bundle);
+                }
             }
         };
         timer.schedule(timerTask,0,100);

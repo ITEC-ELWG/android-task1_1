@@ -23,6 +23,7 @@ public class AlbumCoverFinder {
     private static final Uri ALBUM_COVER_URI = Uri.parse("content://media/external/audio/albumart");
     private static final BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
     private static Bitmap mCachedBit = null;
+    public static boolean defaultCover = true;
 
     public static Bitmap getAlbumCover(Context context, long song_id, long album_id,
                                        boolean allowDefault) {
@@ -34,10 +35,12 @@ public class AlbumCoverFinder {
             if (song_id >= 0) {
                 Bitmap bm = getAlbumCoverFromFile(context, song_id, -1);
                 if (bm != null) {
+                    defaultCover = false;
                     return bm;
                 }
             }
             if (allowDefault) {
+                defaultCover = true;
                 return getDefaultAlbumCover(context);
             }
             return null;
@@ -50,20 +53,24 @@ public class AlbumCoverFinder {
             InputStream in = null;
             try {
                 in = contentResolver.openInputStream(uri);
+                defaultCover = false;
                 return BitmapFactory.decodeStream(in, null, bitmapOptions);
             } catch (FileNotFoundException ex) {
                 // The album art thumbnail does not actually exist. Maybe the user deleted it, or
                 // maybe it never existed to begin with.
                 Bitmap bm = getAlbumCoverFromFile(context, song_id, album_id);
+                defaultCover = false;
                 if (bm != null) {
                     if (bm.getConfig() == null) {
                         bm = bm.copy(Bitmap.Config.RGB_565, false);
                         if (bm == null && allowDefault) {
+                            defaultCover = true;
                             return getDefaultAlbumCover(context);
                         }
                     }
                 } else if (allowDefault) {
                     bm = getDefaultAlbumCover(context);
+                    defaultCover = true;
                 }
                 return bm;
             } finally {
@@ -111,7 +118,7 @@ public class AlbumCoverFinder {
     }
 
 
-    private static Bitmap getDefaultAlbumCover(Context context) {
+    public static Bitmap getDefaultAlbumCover(Context context) {
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.RGB_565;
         return BitmapFactory.decodeStream(

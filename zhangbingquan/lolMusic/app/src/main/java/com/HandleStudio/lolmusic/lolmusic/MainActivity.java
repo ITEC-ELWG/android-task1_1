@@ -28,17 +28,18 @@ public class MainActivity extends Activity {
     private View header;
     private View placeHolderView;
     private AccelerateDecelerateInterpolator smoothInterpolator;
-    KenBurnsView headerPicture;
+    private KenBurnsView headerPicture;
 
     //辅助矩形，1是大头像，2是小头像
     private RectF rect1 = new RectF();
     private RectF rect2 = new RectF();
 
     //ActionBar的标题透明
+    private static String actionBarTitle = "lolMusic";
     private AlphaForegroundColorSpan mAlphaForegroundColorSpan;
     private SpannableString mSpannableString;
 
-    FileSearchHelper fileSearchHelper;
+    private FileSearchHelper fileSearchHelper;
     private DimensHelper dimensHelper;
 
     @Override
@@ -68,9 +69,19 @@ public class MainActivity extends Activity {
     @Override
     public void onResume(){
         super.onResume();
+
+        if (PlayingService.position!=-1) {
+            actionBarTitle = fileSearchHelper.getFileTitle(PlayingService.position);
+            mSpannableString = new SpannableString(actionBarTitle);
+            mSpannableString.setSpan(mAlphaForegroundColorSpan, 0, mSpannableString.length(),
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            getActionBar().setTitle(mSpannableString);
+        }
+
         if (PlayingService.position == -1)
             headerPicture.setResourceIds(R.raw.album_pic_default, R.raw.album_pic_default);
         else headerPicture.setImageBitmap(PlayingActivity.bitmap,PlayingActivity.bitmap);
+
     }
 
     private void initMinHeaderTranslation(){
@@ -85,7 +96,7 @@ public class MainActivity extends Activity {
     private void initAlphaTitleParams(){
         //todo: color protect(1dp drop shadow)
         actionBarTitleColor = getResources().getColor(R.color.actionbar_title_color);
-        mSpannableString = new SpannableString(getString(R.string.now_playing_name));
+        mSpannableString = new SpannableString(actionBarTitle);
         mAlphaForegroundColorSpan = new AlphaForegroundColorSpan(actionBarTitleColor);
     }
 
