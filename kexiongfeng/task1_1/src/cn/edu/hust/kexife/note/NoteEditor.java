@@ -43,8 +43,11 @@ public class NoteEditor extends Activity {
             cursor.moveToFirst();
             String oldNote = cursor.getString(cursor.getColumnIndex(Constant.COLUMN_NAME_NOTE));
             int oldColor = cursor.getInt( cursor.getColumnIndex(Constant.COLUMN_NAME_COLOR) );
+
             editor.setText(oldNote);
             editor.setBackgroundColor(oldColor);
+        }else{
+            editor.requestFocus();
         }
     }
 
