@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Market</string>
+
+    <string name="network_error">网络不给力&#8230;</string>
+    <string name="loading">正在加载&#8230;</string>
+    <string name="no_more_apps">没有更多数据&#8230;</string>
+
+    <string name="this_week">本周</string>
+    <string name="download">下载</string>
+
+    <string name="detail_app_size">应用大小: </string>
+    <string name="detail_app_tag">应用类型: </string>
+    <string name="detail_sdk_requirement">系统要求: </string>
+    <string name="detail_installed_count">安装次数: </string>
+
+</resources>
