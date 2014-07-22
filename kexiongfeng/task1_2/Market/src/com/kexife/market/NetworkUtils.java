@@ -9,7 +9,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class NetworkUtils {
-    public static String getJsonStr(String urlPath) throws Exception{
+    public static String getApiResponse(String urlPath) throws Exception{
         ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         byte[] data = new byte[1024];
         int len;

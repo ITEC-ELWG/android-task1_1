@@ -34,63 +34,14 @@ public class NetworkThread extends Thread{
     public void run(){
         Looper.prepare();
         synchronized(this) {
-            mHandler = new Handler() {
-                @Override
-                public void handleMessage(Message msg) {
-                    Bundle revBundle = msg.getData();
-
-                    switch (msg.what) {
-                        case 0x001:
-                            int start = revBundle.getInt("START");
-                            int count = revBundle.getInt("COUNT");
-                            String apiUrl = getDetailApiUrl(start, count);
-                            try {
-                                String jsonStr = NetworkUtils.getJsonStr(apiUrl);
-                                JSONArray jsonArray = new JSONArray(jsonStr);
-                                @SuppressWarnings("unchecked")
-                                ArrayList<HashMap<String, Object>> list = (ArrayList<HashMap<String, Object>>) JsonHelper.toList(jsonArray);
-                                ArrayList<HashMap<String, Object>> appendList = getCacheList(list);
-
-                                if(appendList.size()>0){
-                                    Bundle bundle = new Bundle();
-                                    bundle.putSerializable("LIST", appendList);
-                                    sendMessageToUi(0x101,bundle);
-                                }else{
-                                    sendMessageToUi(0x102,null);
-                                }
-                            }catch (Exception e) {
-                                logger.e(e);
-                                sendMessageToUi(0x103,null);
-                            }
-                            break;
-                        case 0x002:
-                            int id = revBundle.getInt("ID");
-                            String apiUrl2 = getMoreDetailApiUrl(id);
-                            try{
-                                String jsonStr = NetworkUtils.getJsonStr(apiUrl2);
-                                JSONObject jsonObject = new JSONObject(jsonStr);
-                                HashMap<String, Object> moreDetail = (HashMap<String, Object>) JsonHelper.toMap(jsonObject);
-
-                                Bundle bundle = new Bundle();
-                                bundle.putSerializable("MORE", moreDetail);
-                                sendMessageToUi(0x201,bundle);
-
-                            }catch(Exception e){
-                                logger.e(e);
-                                sendMessageToUi(0x203,null);
-                            }
-                            break;
-                        default:
-                    }
-                }
-            };
+            mHandler = new MessageHandler();
             notifyAll();
         }
         Looper.loop();
     }
 
-    //Thread.start()后如果立即调用Thread.mHandle.sendMessage(...), 此时mHandle可能为null
-    //利用getHandler()方法可保证mHandler已实例化。参考HandlerThread类
+    //Using Thread.mHandle.sendMessage(...) immediately after Thread.start() may cause NullPointException, because mHandle may have not be instantiated yet.
+    //Use synchronized to solve this problem, just like android.os.HandlerThread class.
     public Handler getHandler(){
         if(!isAlive()){
             return null;
@@ -107,7 +58,66 @@ public class NetworkThread extends Thread{
         return mHandler;
     }
 
-    //向UI线程发送消息
+    private class MessageHandler extends Handler{
+        @Override
+        public void handleMessage(Message msg) {
+
+            switch (msg.what) {
+                case MessageType.GET_LIST:
+                    getList(msg);
+                    break;
+                case MessageType.GET_DETAIL:
+                    getDetail(msg);
+                    break;
+                default:
+            }
+        }
+    }
+
+    private void getList(Message msg){
+        Bundle revBundle = msg.getData();
+        int start = revBundle.getInt("START");
+        int count = revBundle.getInt("COUNT");
+        String apiUrl = getListApiUrl(start, count);
+        try {
+            String jsonStr = NetworkUtils.getApiResponse(apiUrl);
+            JSONArray jsonArray = new JSONArray(jsonStr);
+            @SuppressWarnings("unchecked")
+            ArrayList<HashMap<String, Object>> list = (ArrayList<HashMap<String, Object>>) JsonHelper.toList(jsonArray);
+            ArrayList<HashMap<String, Object>> appendList = getCacheList(list);
+
+            if(appendList.size()>0){
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("LIST", appendList);
+                sendMessageToUi(MessageType.RESPONSE,bundle);
+            }else{
+                sendMessageToUi(MessageType.NO_DATA,null);
+            }
+        }catch (Exception e) {
+            logger.e(e);
+            sendMessageToUi(MessageType.EXCEPTION,null);
+        }
+    }
+
+    private void getDetail(Message msg){
+        Bundle revBundle = msg.getData();
+        int id = revBundle.getInt("ID");
+        String apiUrl =  getDetailApiUrl(id);
+        try{
+            String jsonStr = NetworkUtils.getApiResponse(apiUrl);
+            JSONObject jsonObject = new JSONObject(jsonStr);
+            HashMap<String, Object> moreDetail = (HashMap<String, Object>) JsonHelper.toMap(jsonObject);
+
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("MORE", moreDetail);
+            sendMessageToUi(MessageType.RESPONSE,bundle);
+
+        }catch(Exception e){
+            logger.e(e);
+            sendMessageToUi(MessageType.EXCEPTION,null);
+        }
+    }
+
     private void sendMessageToUi(int what, Bundle bundle){
         Message msg = new Message();
         msg.what = what;
@@ -115,15 +125,15 @@ public class NetworkThread extends Thread{
         uiHandler.sendMessage(msg);
     }
 
-    private String getDetailApiUrl(int start,int count){
+    private String getListApiUrl(int start,int count){
         return API_URL + "?start=" + start + "&count=" + count;
     }
 
-    private String getMoreDetailApiUrl(int id){
+    private String getDetailApiUrl(int id){
         return API_URL + "?id=" + id;
     }
 
-    //Save bitmap to cache and return list with filename
+    //Save bitmap to cache and return list with file path
     private ArrayList<HashMap<String,Object>> getCacheList(ArrayList<HashMap<String,Object>> list) throws Exception{
 
         ArrayList<HashMap<String,Object>> cacheList = new ArrayList<HashMap<String, Object>>();
@@ -142,12 +152,13 @@ public class NetworkThread extends Thread{
 
                     File file = new File(mContext.getCacheDir(),filename);
                     if(AppListActivity.updateTime>=updateTime && file.exists() ){
-                        newItem.put(key,filename);
+                        newItem.put(key,file.getPath());
                     }else{
                         Bitmap bitmap = NetworkUtils.downloadImage((String) value);
-                        saveBitmapToCache(bitmap,filename);
-                        newItem.put(key,filename);
-                        logger.w("Update icon");
+                        saveBitmapToCache(bitmap,file.getPath());
+                        bitmap.recycle();
+
+                        newItem.put(key,file.getPath());
                     }
                 }else{
                     newItem.put(key,value);
@@ -159,9 +170,9 @@ public class NetworkThread extends Thread{
         return cacheList;
     }
 
-    private void saveBitmapToCache(Bitmap bitmap, String filename) throws Exception{
+    private void saveBitmapToCache(Bitmap bitmap, String filePath) throws Exception{
 
-        File file = new File(mContext.getCacheDir(),filename);
+        File file = new File(filePath);
 
         FileOutputStream out = null;
         try {

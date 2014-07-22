@@ -3,10 +3,6 @@ package com.kexife.market;
 import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.*;
 import android.view.View;
@@ -16,7 +12,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.HashMap;
-import java.util.List;
 
 public class AppDetailActivity extends Activity {
 
@@ -37,10 +32,19 @@ public class AppDetailActivity extends Activity {
         if(getActionBar()!=null) getActionBar().hide();
         setContentView(R.layout.activity_app_detail);
 
+        detail = (HashMap<String, Object>)getIntent().getSerializableExtra("DETAIL");
+
+        initFindView();
+        initSetView();
+
         Handler handler = new MessageHandler();
         networkThread = new NetworkThread(handler,this);
         networkThread.start();
 
+        getDetail((Integer) detail.get("id"));
+    }
+
+    private void initFindView(){
         imageViewIcon = (ImageView) findViewById(R.id.app_detail_icon);
         textViewTitle = (TextView) findViewById(R.id.app_detail_title);
         textViewVersion = (TextView) findViewById(R.id.app_detail_version);
@@ -50,26 +54,24 @@ public class AppDetailActivity extends Activity {
         textViewCount = (TextView) findViewById(R.id.app_detail_count);
         textViewDescription = (TextView) findViewById(R.id.app_detail_description);
         progressBar = (ProgressBar) findViewById(R.id.app_detail_progressbar);
+    }
 
+    private void initSetView(){
 
-        detail = (HashMap<String, Object>)getIntent().getSerializableExtra("DETAIL");
+        //Using AsyncTask to get bitmap from path
+        new ImageFromPathTask(imageViewIcon).execute((String)detail.get("icon"));
 
-        //Get bitmap from cache
-        Bitmap bitmap = Utils.getBitmapFromCache( getCacheDir(), (String)detail.get("icon") );
-        imageViewIcon.setImageBitmap(bitmap);
         textViewTitle.setText((String) detail.get("title"));
         textViewVersion.setText((String) detail.get("apkVersionName"));
         textViewSize.setText((String) detail.get("apkSize"));
         textViewTag.setText((String) detail.get("tag"));
         textViewMinSdkVersion.setText( Utils.sdkVersionName((Integer)detail.get("apkMinSdkVersion")) );
         textViewCount.setText((String) detail.get("installedCountStr"));
-
-        getMoreDetail((Integer)detail.get("id"));
     }
 
-    private void getMoreDetail(int id){
+    private void getDetail(int id){
         Message message = new Message();
-        message.what = 0x002;
+        message.what = MessageType.GET_DETAIL;
         Bundle bundle = new Bundle();
         bundle.putInt("ID",id);
         message.setData(bundle);
@@ -80,12 +82,12 @@ public class AppDetailActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {
             switch(msg.what){
-                case 0x201:
+                case MessageType.RESPONSE:
                     moreDetail = (HashMap<String, Object>)msg.getData().getSerializable("MORE");
                     textViewDescription.setText((String) moreDetail.get("description"));
                     progressBar.setVisibility(View.GONE);
                     break;
-                case 0x203:
+                case MessageType.EXCEPTION:
                     progressBar.setVisibility(View.GONE);
                     Toast.makeText(AppDetailActivity.this, getString(R.string.network_error), Toast.LENGTH_SHORT).show();
                 default:

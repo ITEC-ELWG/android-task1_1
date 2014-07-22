@@ -15,8 +15,8 @@ import java.util.List;
 
 public class Utils {
 
-    public static Bitmap getBitmapFromCache(File dir, String filename){
-        File file = new File(dir,filename);
+    public static Bitmap getBitmapFromCache(String filePath){
+        File file = new File(filePath);
         FileInputStream in = null;
         try {
             in = new FileInputStream(file);

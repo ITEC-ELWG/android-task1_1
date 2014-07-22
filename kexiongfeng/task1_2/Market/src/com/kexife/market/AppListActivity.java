@@ -41,23 +41,27 @@ public class AppListActivity extends Activity implements OnItemClickListener, On
         setContentView(R.layout.activity_app_list);
 
         listView = (ListView) findViewById(R.id.app_list_view);
-        footerView = new FooterView(this,null,FooterView.LOAD_MODE);
-        //ListView.addFooterView(FooterView,null,false) will disable click event on FooterView,
-        //but it also remove the divider above FooterView, so use setOnClickListener instead.
-        footerView.setOnClickListener(null);
 
+        //Add footer view
+        footerView = new FooterView(this,null,FooterView.LOAD_MODE);
+        footerView.setOnClickListener(null);
+        listView.addFooterView(footerView);
+
+        //Set adapter
         dataList = new ArrayList<HashMap<String, Object>>();
         myBaseAdapter = new MyBaseAdapter(this, dataList, R.layout.app_list_item,
                 new int[]{R.id.app_list_item_icon,R.id.app_list_item_title,R.id.app_list_item_detail});
-
-        listView.addFooterView(footerView);
         listView.setAdapter(myBaseAdapter);
+
+        //Set click and scroll listener
         listView.setOnItemClickListener(this);
         listView.setOnScrollListener(this);
 
+        //Get update time of icons in cache
         preferences = getSharedPreferences("market",MODE_PRIVATE);
         updateTime = preferences.getInt("updateTime",0);
 
+        //Thread to download app list
         Handler handler = new MessageHandler();
         networkThread = new NetworkThread(handler,this);
         networkThread.start();
@@ -74,7 +78,7 @@ public class AppListActivity extends Activity implements OnItemClickListener, On
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putInt("updateTime",newUpdate);
                 editor.commit();
-                logger.w("Update preferec: old "+ updateTime +", new "+ newUpdate);
+                logger.w("Update preference: old "+ updateTime +", new "+ newUpdate);
             }
         }
     }
@@ -84,7 +88,7 @@ public class AppListActivity extends Activity implements OnItemClickListener, On
         footerView.setDisplayMode(FooterView.LOAD_MODE);
 
         Message message = new Message();
-        message.what = 0x001;
+        message.what = MessageType.GET_LIST;
         Bundle bundle = new Bundle();
         bundle.putInt("START",start);
         bundle.putInt("COUNT",count);
@@ -98,16 +102,16 @@ public class AppListActivity extends Activity implements OnItemClickListener, On
         public void handleMessage(Message msg){
             loading = false;
             switch(msg.what){
-                case 0x101:
+                case MessageType.RESPONSE:
                     @SuppressWarnings("unchecked")
                     ArrayList<HashMap<String, Object>> appendList = (ArrayList<HashMap<String, Object>>)msg.getData().getSerializable("LIST");
                     dataList.addAll(appendList);
                     myBaseAdapter.updateList(dataList);
                     break;
-                case 0x102:
+                case MessageType.NO_DATA:
                     footerView.setDisplayMode(FooterView.NO_MORE_APPS_MODE);
                     break;
-                case 0x103:
+                case MessageType.EXCEPTION:
                     footerView.setDisplayMode(FooterView.NETWORK_ERROR_MODE);
                     break;
                 default:
