@@ -28,7 +28,6 @@ public class AlbumCoverFinder {
     public static Bitmap getAlbumCover(Context context, long song_id, long album_id,
                                        boolean allowDefault) {
 
-
         if (album_id < 0) {
             // This is something that is not in the database, so get the album art directly
             // from the file.

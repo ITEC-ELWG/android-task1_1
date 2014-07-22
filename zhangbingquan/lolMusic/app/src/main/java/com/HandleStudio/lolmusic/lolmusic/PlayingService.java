@@ -122,7 +122,8 @@ public class PlayingService extends Service {
 
     public void begin(int p){
         position = p;
-        if (!playState) {
+        Log.e(TAG,fileSearchHelper.getFilePath(position));
+        if ((!playState)&&(mediaPlayer==null)) {
             play();
             playState = true;
             notifyFourItem();
@@ -174,7 +175,9 @@ public class PlayingService extends Service {
     }
 
     public void pause(){
-        mediaPlayer.pause();
+        if (mediaPlayer.isPlaying()){
+            mediaPlayer.pause();
+        }
         playState = false;
         notifyPlayOrPause();
     }
@@ -186,6 +189,7 @@ public class PlayingService extends Service {
     }
 
     public void toNext(){
+
         begin(nextManualPosition);
     }
 
@@ -377,6 +381,9 @@ public class PlayingService extends Service {
         };
         timer.schedule(timerTask,0,100);
     }
+
+
+
 
     public int getRandomPosition(){
         return  (int)(Math.random()*(fileSearchHelper.getFileCount()-1));

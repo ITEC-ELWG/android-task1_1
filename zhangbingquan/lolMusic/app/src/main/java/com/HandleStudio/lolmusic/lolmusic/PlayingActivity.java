@@ -132,6 +132,7 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
                 Bundle bundle = intent.getBundleExtra("extra");
                 textTitle.setText(bundle.getString("title"));
                 textArtist.setText(bundle.getString("artist"));
+
             }
 
             if (action.equals(PlayingService.ACTION_UPDATE_MODE)){
@@ -377,8 +378,9 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
             int intColor = Color.rgb(RGBMainColor[0],RGBMainColor[1],RGBMainColor[2]);
             CircleDrawView.color = intColor;
             ModeIconDrawView.color = intColor;
-            if ((newThreadFlag!=0)&&(newThreadFlag == PlayingActivity.newThreadFlag))
+            if ((newThreadFlag!=0)&&(newThreadFlag == PlayingActivity.newThreadFlag)){
                 handler.sendEmptyMessage(msgInvalidateColor);
+            }
             editor.putInt(String.valueOf(songId),intColor);
             editor.commit();
         }
