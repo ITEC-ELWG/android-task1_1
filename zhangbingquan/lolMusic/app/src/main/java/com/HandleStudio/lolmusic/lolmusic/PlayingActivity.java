@@ -3,38 +3,32 @@ package com.HandleStudio.lolmusic.lolmusic;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.os.AsyncTask;
-import android.os.Binder;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.HandleStudio.lolmusic.lolmusic.R;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.w3c.dom.Text;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by 2bab on 14-7-10.
@@ -45,33 +39,41 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
     private static final String TAG = "PlayingActivity";
 
-    private FrameLayout albumPicAndLrc;
     private DimensHelper dimensHelper;
-    private BroadcastDeliveHelper bdHelper;
+    private BroadcastDeliverHelper bdHelper;
 
     private PlayingActivityReceiver receiver;
-    private int position;
-    private boolean playState=true;
-    private int tempIdontknow;
     private int mode = PlayingService.MODE_SEQUENCE;
-
-    private Button playAndPause;
-    private Button pre;
-    private Button next;
-    private ImageView order;
-    private SeekBar seekBar;
-    private TextView title;
-    private TextView artist;
-    private TextView now_duration;
-    private TextView duration;
-
-    //播放控制
-    private Timer timer;
-    private TimerTask timerTask;
+    private int position;
     private boolean isChanging = false;
+    boolean playState=true;
 
-    /*ServiceConnection connection;
-    PlayingService.MusicBinder binder;*/
+    private FrameLayout layoutAlbumPicAndLrc;
+    private ModeIconDrawView modeIconDrawView;
+    private TextView textTitle;
+    private TextView textArtist;
+    private TextView textNowDuration;
+    private TextView textDuration;
+    private FrameLayout fakeBtnPlayAndPause;
+    private FrameLayout fakeBtnPre;
+    private FrameLayout fakeBtnNext;
+    private CircleDrawView circleDrawPre;
+    private CircleDrawView circleDrawPlayPause;
+    private CircleDrawView circleDrawNext;
+    private ImageView btnPlayPause;
+    private ImageView btnPre;
+    private ImageView btnNxet;
+    private SeekBar seekBar;
+    private ImageView imageAlbumCover;
+
+    public static Bitmap bitmap;
+    private Handler handler;
+    private static final int defaultColor = -3354940;
+    private final int msgInvalidateColor = 0x1234;
+    private static int newThreadFlag = 0;
+
+    private SharedPreferences preferences;
+    private SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,24 +82,29 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
         //init
         dimensHelper = new DimensHelper(this);
-        bdHelper = new BroadcastDeliveHelper(this);
+        bdHelper = new BroadcastDeliverHelper(this);
+        initHandler();
         initActionBar();
         initFindView();
-        initAlbumPicAndLrcHeight();//画方形
+        initAlbumCoverAndLrcHeight();//画方形
+
         //获得歌曲在数组的顺序
         Intent intent = getIntent();
         position = intent.getIntExtra("index",-1);
 
+        preferences = getSharedPreferences("lolmusic",MODE_PRIVATE);
+        editor = preferences.edit();
     }
 
 
     public void registerUIReceiver(){
         IntentFilter filter = new IntentFilter();
-        filter.addAction(PlayingService.ACTION_UPDATE_STATE);
+        filter.addAction(PlayingService.ACTION_UPDATE_PLAY_PAUSE);
         filter.addAction(PlayingService.ACTION_UPDATE_CURRENT_MUSIC);
         filter.addAction(PlayingService.ACTION_UPDATE_MODE);
         filter.addAction(PlayingService.ACTION_UPDATE_DURATION);//总时间
         filter.addAction(PlayingService.ACTION_UPDATE_PROGRESS);//进度条
+        filter.addAction(PlayingService.ACTION_UPDATE_ALBUM_COVER);
         receiver = new PlayingActivityReceiver();
         registerReceiver(receiver,filter);
     }
@@ -108,41 +115,72 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         public void onReceive(Context context,Intent intent){
             String action = intent.getAction();
 
-            if (action.equals(PlayingService.ACTION_UPDATE_STATE)){
+            if (action.equals(PlayingService.ACTION_UPDATE_PLAY_PAUSE)){
                 int playAndPauseIcon;
                 playAndPauseIcon = intent.getIntExtra("extra",1);
                 if (playAndPauseIcon==1) {
                     playState = true;
-                    playAndPause.setBackgroundResource(R.drawable.pause);
+                    btnPlayPause.setBackgroundResource(R.drawable.pause);
                 }
                 else {
                     playState = false;
-                    playAndPause.setBackgroundResource(R.drawable.play);
+                    btnPlayPause.setBackgroundResource(R.drawable.play);
                 }
             }
 
             if (action.equals(PlayingService.ACTION_UPDATE_CURRENT_MUSIC)){
                 Bundle bundle = intent.getBundleExtra("extra");
-                title.setText(bundle.getString("title"));
-                artist.setText(bundle.getString("artist"));
+                textTitle.setText(bundle.getString("title"));
+                textArtist.setText(bundle.getString("artist"));
+
             }
 
             if (action.equals(PlayingService.ACTION_UPDATE_MODE)){
                 mode = intent.getIntExtra("extra",PlayingService.MODE_SEQUENCE);
-                showTip(String.valueOf(mode));
+                modeIconDrawView.changeModeIcon(mode);
+                modeIconDrawView.invalidate();
             }
 
             if (action.equals(PlayingService.ACTION_UPDATE_DURATION)){
                 Bundle bundle = intent.getBundleExtra("extra");
-                duration.setText(bundle.getString("totalTime"));
+                textDuration.setText(bundle.getString("totalTime"));
                 seekBar.setMax(bundle.getInt("duration"));
             }
 
             if (action.equals(PlayingService.ACTION_UPDATE_PROGRESS)){
                 Bundle bundle = intent.getBundleExtra("extra");
-                now_duration.setText(bundle.getString("currentTime"));
-                seekBar.setProgress(bundle.getInt("currentDuration"));
+                textNowDuration.setText(bundle.getString("currentTime"));
+                if (!isChanging) seekBar.setProgress(bundle.getInt("currentDuration"));
             }
+
+            if (action.equals(PlayingService.ACTION_UPDATE_ALBUM_COVER)){
+                Bundle bundle = intent.getBundleExtra("extra");
+                int songId = bundle.getInt("songId");
+                int albumId = bundle.getInt("albumId");
+                bitmap = AlbumCoverFinder.getAlbumCover(PlayingActivity.this,songId,albumId,true);
+                imageAlbumCover.setImageBitmap(bitmap);
+                if (!AlbumCoverFinder.defaultCover) {
+                    int currentColor = preferences.getInt(String.valueOf(songId),0);
+                    if (currentColor==0) {
+                        Runnable runnableChangeColor = new ChangeColor(songId,newThreadFlag);
+                        Thread threadChangeColor = new Thread(runnableChangeColor);
+                        threadChangeColor.start();
+                    }
+                    else {
+                        CircleDrawView.color = currentColor;
+                        ModeIconDrawView.color = currentColor;
+                        handler.sendEmptyMessage(msgInvalidateColor);
+                    }
+                }
+                else {
+                    CircleDrawView.color = defaultColor;
+                    ModeIconDrawView.color = defaultColor;
+                    handler.sendEmptyMessage(msgInvalidateColor);
+                }
+
+
+            }
+
         }
 
     }
@@ -158,23 +196,39 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
 
             case R.id.playing_song_pre:
                 bdHelper.broadcastDeliver(PlayingService.CONTROL_PRE);
+                newThreadFlag = (int)(Math.random()*10);
                 break;
 
             case R.id.playing_song_next:
                 bdHelper.broadcastDeliver(PlayingService.CONTROL_NEXT);
+                newThreadFlag = (int)(Math.random()*10);
                 break;
 
-            case R.id.playing_song_order:
+            case R.id.modeIconDrawView:
                 if (mode == PlayingService.MODE_SEQUENCE) mode = PlayingService.MODE_ONE_LOOP;
                 else mode++;
-                showTip("模式："+mode);
                 bdHelper.broadcastDeliver(PlayingService.CONTROL_MODE,mode);
+                modeIconDrawView.changeModeIcon(mode);
+                modeIconDrawView.invalidate();
                 break;
 
         }
     }
 
 
+    public void initHandler(){
+        handler = new Handler(){
+          @Override
+          public void handleMessage(Message msg){
+              if (msg.what==msgInvalidateColor){
+                  circleDrawPre.invalidate();
+                  circleDrawNext.invalidate();
+                  circleDrawPlayPause.invalidate();
+                  modeIconDrawView.invalidate();
+              }
+          }
+        };
+    }
 
     public void initActionBar(){
         ActionBar actionBar = getActionBar();
@@ -183,32 +237,42 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
         actionBar.setHomeButtonEnabled(true);
     }
 
+
     public void initFindView(){
-        albumPicAndLrc = (FrameLayout) findViewById(R.id.albumpic_and_lrc);
-        playAndPause = (Button) findViewById(R.id.playing_song_play_pause);
-        pre = (Button) findViewById(R.id.playing_song_pre);
-        next = (Button) findViewById(R.id.playing_song_next);
-        order = (ImageView) findViewById(R.id.playing_song_order);
+        layoutAlbumPicAndLrc = (FrameLayout) findViewById(R.id.albumpic_and_lrc);
+        fakeBtnPlayAndPause = (FrameLayout) findViewById(R.id.playing_song_play_pause);
+        fakeBtnPre = (FrameLayout) findViewById(R.id.playing_song_pre);
+        fakeBtnNext = (FrameLayout) findViewById(R.id.playing_song_next);
+        circleDrawPre = (CircleDrawView) findViewById(R.id.circle_draw_view_1);
+        circleDrawPlayPause = (CircleDrawView) findViewById(R.id.circle_draw_view_2);
+        circleDrawNext = (CircleDrawView) findViewById(R.id.circle_draw_view_3);
+        btnPlayPause = (ImageView)findViewById(R.id.btn_play_pause);
+        btnPre = (ImageView)findViewById(R.id.btn_pre);
+        btnNxet = (ImageView)findViewById(R.id.btn_next);
         seekBar = (SeekBar) findViewById(R.id.playing_song_seek_bar);
-        title = (TextView) findViewById(R.id.playing_song_title);
-        artist = (TextView) findViewById(R.id.playing_song_artist);
-        now_duration = (TextView) findViewById(R.id.playing_song_now_duration);
-        duration = (TextView) findViewById(R.id.playing_song_duration);
+        textTitle = (TextView) findViewById(R.id.playing_song_title);
+        textArtist = (TextView) findViewById(R.id.playing_song_artist);
+        textNowDuration = (TextView) findViewById(R.id.playing_song_now_duration);
+        textDuration = (TextView) findViewById(R.id.playing_song_duration);
+        modeIconDrawView = (ModeIconDrawView) findViewById(R.id.modeIconDrawView);
+        imageAlbumCover = (ImageView) findViewById(R.id.album_picture);
+
 
         seekBar.setOnSeekBarChangeListener(new MySeekBar());
-        playAndPause.setOnClickListener(this);
-        pre.setOnClickListener(this);
-        next.setOnClickListener(this);
-        order.setOnClickListener(this);
+        fakeBtnPlayAndPause.setOnClickListener(this);
+        fakeBtnPre.setOnClickListener(this);
+        fakeBtnNext.setOnClickListener(this);
+        modeIconDrawView.setOnClickListener(this);
     }
 
-    public void initAlbumPicAndLrcHeight(){
+
+    public void initAlbumCoverAndLrcHeight(){
         DisplayMetrics dm = new DisplayMetrics();
         WindowManager wm = PlayingActivity.this.getWindowManager();
         wm.getDefaultDisplay().getMetrics(dm);
-        ViewGroup.LayoutParams params = albumPicAndLrc.getLayoutParams();
-        params.height = dm.widthPixels + dimensHelper.getStatusBarHeight();
-        albumPicAndLrc.setLayoutParams(params);
+        ViewGroup.LayoutParams params = layoutAlbumPicAndLrc.getLayoutParams();
+        params.height = dm.widthPixels;
+        layoutAlbumPicAndLrc.setLayoutParams(params);
     }
 
 
@@ -221,8 +285,8 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
             isChanging=true;
         }
 
-        public void onStopTrackingTouch(SeekBar seekbbbar) {
-            bdHelper.broadcastDeliver(PlayingService.CONTROL_PROGRESS,seekBar.getProgress());
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            bdHelper.broadcastDeliver(PlayingService.CONTROL_PROGRESS,PlayingActivity.this.seekBar.getProgress());
             isChanging=false;
         }
 
@@ -252,53 +316,77 @@ public class PlayingActivity extends Activity implements View.OnClickListener{
     public void onStart(){
         super.onStart();
         registerUIReceiver();
-
-        Log.i(TAG,"onStart()");
     }
+
 
     @Override
     public void onResume(){
         super.onResume();
-        bdHelper.broadcastDeliver(PlayingService.CONTROL_BEGIN, position);
+
+        //开始播放或加载当前播放状态
+        if(position==-1||position==PlayingService.position) {
+            bdHelper.broadcastDeliver(PlayingService.CONTROL_ASK_FOR_STATE);
+        }
+        else bdHelper.broadcastDeliver(PlayingService.CONTROL_BEGIN, position);
+
+        //改变按钮颜色
     }
+
 
     @Override
     public void onPause(){
         super.onPause();
-        unregisterReceiver(receiver);
     }
+
 
     @Override
     public void onStop(){
         super.onStop();
+        unregisterReceiver(receiver);
     }
+
 
     @Override
     public void onDestroy(){
         super.onDestroy();
     }
 
+
     public void showTip(String s){
         Toast.makeText(PlayingActivity.this, s, Toast.LENGTH_SHORT).show();
     }
 
+    public class ChangeColor implements Runnable{
 
-    /*public void connectToService(){
-        connection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-                binder = (PlayingService.MusicBinder) iBinder;
-                binder.begin(position);
-                Log.i(TAG,"onServiceConnected()");
-            }
+        int songId;
+        int newThreadFlag;
 
-            @Override
-            public void onServiceDisconnected(ComponentName componentName) {
-                Log.i(TAG,"onServiceDisconnected()");
+        public ChangeColor(int sid,int flag){
+            songId = sid;
+            newThreadFlag = flag;
+        }
+
+        @Override
+        public void run(){
+            List<int[]> result = new ArrayList<int[]>();
+            try {
+                result = PicMainColorHelper.compute(bitmap, 5);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        };
-        Intent intent = new Intent(getApplicationContext(),PlayingService.class);
-        bindService(intent, connection, BIND_AUTO_CREATE);
-    }*///尝试后无法满足
+            int[] RGBMainColor = result.get(0);
+            int intColor = Color.rgb(RGBMainColor[0],RGBMainColor[1],RGBMainColor[2]);
+            CircleDrawView.color = intColor;
+            ModeIconDrawView.color = intColor;
+            if ((newThreadFlag!=0)&&(newThreadFlag == PlayingActivity.newThreadFlag)){
+                handler.sendEmptyMessage(msgInvalidateColor);
+            }
+            editor.putInt(String.valueOf(songId),intColor);
+            editor.commit();
+        }
+    }
+
 
 }
+
+

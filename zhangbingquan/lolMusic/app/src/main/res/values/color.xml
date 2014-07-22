@@ -3,4 +3,5 @@
     <color name="white">@android:color/white</color>
     <color name="black">@android:color/black</color>
     <color name="actionbar_title_color">@android:color/white</color>
+    <color name="music_list_artist_color">#bdbdbd</color>
 </resources>

@@ -10,4 +10,8 @@
         <attr name="diameter" format="dimension"/>
     </declare-styleable>
 
+    <!--<declare-styleable name="ModeIconDrawView">
+
+    </declare-styleable>-->
+
 </resources>

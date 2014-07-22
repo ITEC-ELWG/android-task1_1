@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 
 
@@ -17,6 +16,7 @@ import android.view.View;
 public class CircleDrawView extends View{
 
     private float radius;
+    public static int color = Color.BLACK;
 
     public CircleDrawView(Context context, AttributeSet attrs){
         super(context, attrs);
@@ -30,7 +30,7 @@ public class CircleDrawView extends View{
         canvas.drawColor(Color.WHITE);
         Paint paint = new Paint();
         paint.setAntiAlias(true);
-        paint.setColor(Color.BLACK);
+        paint.setColor(color);
         paint.setStyle(Paint.Style.FILL);
         canvas.drawCircle(radius,radius,radius,paint);
     }

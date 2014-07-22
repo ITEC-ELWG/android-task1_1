@@ -10,6 +10,8 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -28,37 +30,39 @@ public class PlayingService extends Service {
     public static final String CONTROL_NEXT = "com.HandleStudio.lolmusic.lolmusic.CONTROL_NEXT";
     public static final String CONTROL_MODE = "com.HandleStudio.lolmusic.lolmusic.CONTROL_MODE";
     public static final String CONTROL_PROGRESS = "com.HandleStudio.lolmusic.lolmusic.CONTROL_PROGRESS";
+    public static final String CONTROL_ASK_FOR_STATE = "com.HandleStudio.lolmusic.lolmusic.CONTROL_ASK_FOR_STATE";
 
     public static final String ACTION_UPDATE_PROGRESS = "com.HandleStudio.lolmusic.lolmusic.UPDATE_PROGRESS";
     public static final String ACTION_UPDATE_DURATION = "com.HandleStudio.lolmusic.lolmusic.UPDATE_DURATION";
     public static final String ACTION_UPDATE_CURRENT_MUSIC = "com.HandleStudio.lolmusic.lolmusic.UPDATE_CURRENT_MUSIC";
     public static final String ACTION_UPDATE_MODE = "com.HandleStudio.lolmusic.lolmusic.UPDATE_MODE";
-    public static final String ACTION_UPDATE_STATE = "com.HandleStudio.lolmusic.lolmusic.UPDATE_STATE";
-
+    public static final String ACTION_UPDATE_PLAY_PAUSE = "com.HandleStudio.lolmusic.lolmusic.UPDATE_PLAY_PAUSE";
+    public static final String ACTION_UPDATE_ALBUM_COVER = "com.HandleStudio.lolmusic.lolmusic.UPDATE_ALBUM_COVER";
 
     private ControlReceiver receiver;
-    /*Binder musicBinder = new MusicBinder();    //这里要声明称IBinder或者Binder不能用MusicBinder，大坑*/
     private FileSearchHelper fileSearchHelper;
-    private BroadcastDeliveHelper bdhelp;
+    private BroadcastDeliverHelper bdhelp;
 
     //播放控制
-    private int position;
+    public static int position = -1;
+    private static int nextAutoPosition =-1;
+    private static int nextManualPosition =-1;
+    private static int preManualPosition =-1;
     private int currentTime;
     private MediaPlayer mediaPlayer;
     private boolean playState = false;
     private static int playMode = MODE_SEQUENCE;
     private Timer timer;
-    private TimerTask timerTask;
+    TimerTask timerTask;
 
     public PlayingService() {
-        Log.i(TAG, "MusicService Construction");
+
     }
 
     @Override
     public void onCreate(){
-        Log.i(TAG, "MusicService onCreate()");
         fileSearchHelper = new FileSearchHelper(this);
-        bdhelp = new BroadcastDeliveHelper(this);
+        bdhelp = new BroadcastDeliverHelper(this);
         registerControlReceiver();
     }
 
@@ -70,6 +74,7 @@ public class PlayingService extends Service {
         filter.addAction(CONTROL_NEXT);
         filter.addAction(CONTROL_MODE);
         filter.addAction(CONTROL_PROGRESS);
+        filter.addAction(CONTROL_ASK_FOR_STATE);
         receiver = new ControlReceiver();
         registerReceiver(receiver,filter);
     }
@@ -99,11 +104,16 @@ public class PlayingService extends Service {
 
             if (action.equals(CONTROL_MODE)){
                 playMode = intent.getIntExtra("extra",MODE_SEQUENCE);
+                nextPosition();
                 Log.e(TAG,String.valueOf(playMode));
             }
 
             if (action.equals(CONTROL_PROGRESS)){
                 mediaPlayer.seekTo(intent.getIntExtra("extra",0));
+            }
+            
+            if (action.equals(CONTROL_ASK_FOR_STATE)){
+                notifyState();//收到需要获取当前播放状态的请求，返回所有播放的信息
             }
 
         }
@@ -112,12 +122,12 @@ public class PlayingService extends Service {
 
     public void begin(int p){
         position = p;
-        if (!playState) {
+        Log.e(TAG,fileSearchHelper.getFilePath(position));
+        if ((!playState)&&(mediaPlayer==null)) {
             play();
             playState = true;
-            notifyMode();
-            notifyState();
-            notifyCurrentMusic();
+            notifyFourItem();
+            nextPosition();
         }
         else {
             timer.cancel();
@@ -127,86 +137,165 @@ public class PlayingService extends Service {
             mediaPlayer = null;
             play();
             playState = true;
-            notifyMode();
-            notifyState();
-            notifyCurrentMusic();
+            notifyFourItem();
+            nextPosition();
+        }
+    }
+
+
+    public void play(){
+        mediaPlayer = new MediaPlayer();
+        try {
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mediaPlayer.setDataSource(fileSearchHelper.getFilePath(position));
+            mediaPlayer.prepare();
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mediaPlayer) {
+                    mediaPlayer.start();
+                }
+            });
+
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mediaPlayer) {
+                    timer.cancel();
+                    mediaPlayer.release();
+                    PlayingService.this.mediaPlayer = null;
+                    playState = false;
+                    onFinishToNext();
+                }
+            });
+
+            startProgress();
+
+        } catch (Exception e) {
+            Log.e(TAG,"can't find file!");
         }
     }
 
     public void pause(){
-        mediaPlayer.pause();
+        if (mediaPlayer.isPlaying()){
+            mediaPlayer.pause();
+        }
         playState = false;
-        notifyState();
+        notifyPlayOrPause();
     }
 
     public void continuePlay(){
         mediaPlayer.start();
         playState = true;
-        notifyState();
+        notifyPlayOrPause();
     }
 
     public void toNext(){
-        if(playMode==MODE_RANDOM){
-            position = getRandomPosition();
-        }
-        else {
-            if (position == (fileSearchHelper.getFileCount() - 1)) {
-                position = 0;
-            } else position++;
-        }
-        begin(position);
+
+        begin(nextManualPosition);
     }
 
     public void onFinishToNext(){
         switch (playMode){
-            case MODE_RANDOM:
-                position = getRandomPosition();
-                begin(position);
-
-            case MODE_ALL_LOOP:
-                if (position == (fileSearchHelper.getFileCount() - 1)) {
-                    position = 0;
-                }
-                else position++;
-                begin(position);
-
             case MODE_SEQUENCE:
-                if (position != (fileSearchHelper.getFileCount() - 1))
-                    position++;
-                begin(position);
-
-            case MODE_ONE_LOOP:
-                begin(position);
+                if (position != (fileSearchHelper.getFileCount() - 1)) {
+                    begin(nextAutoPosition);
+                }
+                else {
+                    mediaPlayer = new MediaPlayer();
+                    mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                    try {
+                        mediaPlayer.setDataSource(fileSearchHelper.getFilePath(nextAutoPosition));
+                        mediaPlayer.prepare();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    notifyState();
+                    mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer mediaPlayer) {
+                            timer.cancel();
+                            mediaPlayer.release();
+                            PlayingService.this.mediaPlayer = null;
+                            playState = false;
+                            onFinishToNext();
+                        }
+                    });
+                }
+                break;
+            default:
+                begin(nextAutoPosition);
         }
     }
 
     public void toPrevious(){
-        if(playMode==MODE_RANDOM){
-            position = getRandomPosition();
-        }
-        else {
-            if (position == 0) {
-                position = fileSearchHelper.getFileCount() - 1;
-            } else position--;
-        }
-        begin(position);
+        begin(preManualPosition);
     }
+
+
+    public void nextPosition(){
+
+            switch (playMode) {
+                case MODE_ONE_LOOP:
+                    nextAutoPosition = position;
+                    break;
+
+                case MODE_ALL_LOOP:
+                    if (position == (fileSearchHelper.getFileCount() - 1)) {
+                        nextAutoPosition = 0;
+                    } else nextAutoPosition = position + 1;
+                    break;
+
+                case MODE_RANDOM:
+                    nextAutoPosition = getRandomPosition();
+                    break;
+
+                case MODE_SEQUENCE:
+                    if (position != (fileSearchHelper.getFileCount() - 1)) {
+                        nextAutoPosition = position + 1;
+                    } else {
+                        nextAutoPosition = position;
+                    }
+                    break;
+            }
+
+            switch (playMode){
+                case MODE_RANDOM:
+                    nextManualPosition = getRandomPosition();
+                    preManualPosition = getRandomPosition();
+                    break;
+                default:
+                    if (position == (fileSearchHelper.getFileCount() - 1)) {
+                        nextManualPosition = 0;
+                    }
+                    else nextManualPosition = position + 1;
+
+                    if (position == 0){
+                        preManualPosition = fileSearchHelper.getFileCount() - 1;
+                    }
+                    else {
+                        preManualPosition = position - 1;
+                    }
+                    break;
+            }
+    }
+
+    /**
+     * notify UI component
+     */
 
     public void notifyMode(){
         bdhelp.broadcastDeliver(ACTION_UPDATE_MODE,playMode);
     }
 
-    public void notifyState(){
+    public void notifyPlayOrPause(){
         if(playState)
-            bdhelp.broadcastDeliver(ACTION_UPDATE_STATE,1);
-        else bdhelp.broadcastDeliver(ACTION_UPDATE_STATE,0);
+            bdhelp.broadcastDeliver(ACTION_UPDATE_PLAY_PAUSE,1);
+        else bdhelp.broadcastDeliver(ACTION_UPDATE_PLAY_PAUSE,0);
     }
 
     public void notifyProgress(Bundle b){
-        Bundle bundle = b;
         Intent intent = new Intent();
         intent.setAction(ACTION_UPDATE_PROGRESS);
-        intent.putExtra("extra",bundle);
+        intent.putExtra("extra",b);
         sendBroadcast(intent);
     }
 
@@ -238,18 +327,17 @@ public class PlayingService extends Service {
         sendBroadcast(intent);
     }
 
-    @Override
-    public boolean onUnbind(Intent intent){
-        Log.i(TAG,"MusicService onUnbind()");
-        return true;
+
+    public void notifyAlbumCover(){
+        Intent intent = new Intent();
+        intent.setAction(ACTION_UPDATE_ALBUM_COVER);
+        Bundle bundle = new Bundle();
+        bundle.putInt("songId",fileSearchHelper.getFileSongId(position));
+        bundle.putInt("albumId", fileSearchHelper.getFileAlbumId(position));
+        intent.putExtra("extra", bundle);
+        sendBroadcast(intent);
     }
 
-    @Override
-    public void onDestroy(){
-        super.onDestroy();
-        unregisterReceiver(receiver);
-        Log.i(TAG,"Destroy");
-    }
 
     public String timeTransform(int minute, int second){
         String mm,ss;
@@ -260,52 +348,42 @@ public class PlayingService extends Service {
         return mm+":"+ss;
     }
 
+    public void notifyFourItem(){
+        notifyPlayOrPause();
+        notifyCurrentMusic();
+        notifyMode();
+        notifyAlbumCover();
+    }
 
-    public void play(){
-        mediaPlayer = new MediaPlayer();
-        try {
-            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            mediaPlayer.setDataSource(fileSearchHelper.getFilePath(position));
-            mediaPlayer.prepare();
-            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mediaPlayer) {
-                    mediaPlayer.start();
-                }
-            });
+    public void notifyState(){
+        timer.cancel();
+        notifyFourItem();
+        startProgress();//notifyDuration,notifyProgress
+    }
 
-            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mediaPlayer) {
-                    timer.cancel();
-                    mediaPlayer.release();
-                    PlayingService.this.mediaPlayer = null;
-                    playState = false;
-                    Log.e(TAG, "The song end!Begin a new one");
-                    onFinishToNext();
-                }
-            });
 
-            notifyDuration();
-            timer = new Timer();
-            timerTask = new TimerTask() {
-                @Override
-                public void run() {
-                    currentTime = mediaPlayer.getCurrentPosition()/1000;
-                    int minute = currentTime/60;
-                    int second = currentTime%60;
+    public void startProgress(){
+        notifyDuration();
+        timer = new Timer();
+        timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (mediaPlayer!=null) {
+                    currentTime = mediaPlayer.getCurrentPosition() / 1000;
+                    int minute = currentTime / 60;
+                    int second = currentTime % 60;
                     Bundle bundle = new Bundle();
-                    bundle.putString("currentTime",timeTransform(minute,second));
-                    bundle.putInt("currentDuration",mediaPlayer.getCurrentPosition());
+                    bundle.putString("currentTime", timeTransform(minute, second));
+                    bundle.putInt("currentDuration", mediaPlayer.getCurrentPosition());
                     notifyProgress(bundle);
                 }
-            };
-            timer.schedule(timerTask,0,100);
-
-        } catch (Exception e) {
-            Log.e(TAG,"can't find file!");
-        }
+            }
+        };
+        timer.schedule(timerTask,0,100);
     }
+
+
+
 
     public int getRandomPosition(){
         return  (int)(Math.random()*(fileSearchHelper.getFileCount()-1));
@@ -313,14 +391,14 @@ public class PlayingService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.e(TAG, "MusicService onBind() success");
         return null;
     }
 
+
     @Override
-    public void onRebind(Intent intent){
-        super.onRebind(intent);
-        Log.e(TAG, "MusicService onReBind() success");
+    public void onDestroy(){
+        super.onDestroy();
+        unregisterReceiver(receiver);
     }
 
 }

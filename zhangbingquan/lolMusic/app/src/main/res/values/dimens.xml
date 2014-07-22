@@ -6,15 +6,17 @@
     <!--主界面-列表页-->
     <dimen name="logo_border_width">2dp</dimen>
     <dimen name="header_height">250dp</dimen>
+    <dimen name="music_list_margin_left">15dp</dimen>
     <dimen name="header_logo_size">100dp</dimen>
-    <dimen name="music_list_title">15sp</dimen>
-    <dimen name="music_list_artist">10sp</dimen>
+    <dimen name="music_list_title">18sp</dimen>
+    <dimen name="music_list_title_padding_left">18dp</dimen>
+    <dimen name="music_list_artist">15sp</dimen>
     <dimen name="music_list_duration">12sp</dimen>
-
+    <dimen name="music_list_each_height">50dp</dimen>
 
     <!--播放界面-->
-    <dimen name="playing_song_title">19sp</dimen>
-    <dimen name="playing_song_artist">12sp</dimen>
+    <dimen name="playing_song_title">20sp</dimen>
+    <dimen name="playing_song_artist">14sp</dimen>
     <dimen name="playing_song_order_width">30dp</dimen>
     <dimen name="playing_song_order_height">20dp</dimen>
     <dimen name="playing_song_duration">40dp</dimen>
@@ -27,7 +29,7 @@
     <dimen name="playing_song_play_pause">55dp</dimen>
     <dimen name="playing_song_play_pause_button">22dp</dimen>
     <dimen name="playing_song_play_pre_nex_margin_left_right">50dp</dimen>
-    <dimen name="playing_song_play_pre_nex_margin_top">5dp</dimen>
+    <dimen name="playing_song_play_pre_nex_margin_top">15dp</dimen>
 
 
 </resources>

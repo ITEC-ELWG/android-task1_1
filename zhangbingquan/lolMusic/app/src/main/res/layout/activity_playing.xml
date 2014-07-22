@@ -15,8 +15,7 @@
         <ImageView
             android:id="@+id/album_picture"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/picture0"/>
+            android:layout_height="match_parent"/>
     </FrameLayout>
 
     <LinearLayout
@@ -29,28 +28,35 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
+
             <TextView
                 android:id="@+id/playing_song_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:singleLine="true"
                 android:textSize="@dimen/playing_song_title"
-                android:text="@string/test_text"/>
+                android:maxEms="15"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="1"
+                android:focusableInTouchMode="true"
+                android:focusable="true"/>
+
             <TextView
                 android:id="@+id/playing_song_artist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/playing_song_title"
                 android:layout_marginTop="@dimen/playing_song_artist_margin_top"
-                android:textSize="@dimen/playing_song_artist"
-                android:text="@string/test_text"/>
-            <ImageView
-                android:id="@+id/playing_song_order"
-                android:layout_width="@dimen/playing_song_order_width"
-                android:layout_height="@dimen/playing_song_order_height"
+                android:textSize="@dimen/playing_song_artist"/>
+
+            <com.HandleStudio.lolmusic.lolmusic.ModeIconDrawView
+                android:id="@+id/modeIconDrawView"
+                android:layout_width="32dp"
+                android:layout_height="23dp"
                 android:layout_alignParentRight="true"
                 android:layout_centerVertical="true"
-                android:background="@drawable/order"
-                />
+                android:clickable="true"/>
+
         </RelativeLayout>
 
         <LinearLayout
@@ -63,8 +69,7 @@
                android:layout_width="@dimen/playing_song_duration"
                android:layout_height="wrap_content"
                android:layout_gravity="center"
-               android:textSize="@dimen/playing_song_artist"
-               android:text="@string/test_duration"/>
+               android:textSize="@dimen/playing_song_artist"/>
            <SeekBar
                android:id="@+id/playing_song_seek_bar"
                android:layout_width="0dp"
@@ -77,8 +82,7 @@
                android:layout_height="wrap_content"
                android:layout_gravity="center_vertical"
                android:gravity="right"
-               android:textSize="@dimen/playing_song_artist"
-               android:text="@string/test_duration"/>
+               android:textSize="@dimen/playing_song_artist"/>
         </LinearLayout>
 
         <RelativeLayout
@@ -86,20 +90,23 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="@dimen/playing_song_play_pre_nex_margin_left_right"
             android:layout_marginRight="@dimen/playing_song_play_pre_nex_margin_left_right"
-            android:layout_marginTop="@dimen/playing_song_play_pre_nex_margin_top">
+            android:layout_marginTop="@dimen/playing_song_play_pre_nex_margin_top"
+            android:clickable="true">
             <FrameLayout
+                android:id="@+id/playing_song_pre"
                 android:layout_width="@dimen/playing_song_pre_next"
                 android:layout_height="@dimen/playing_song_pre_next"
                 android:layout_alignParentLeft="true"
                 android:layout_centerVertical="true">
 
                 <com.HandleStudio.lolmusic.lolmusic.CircleDrawView
+                    android:id="@+id/circle_draw_view_1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:diameter="@dimen/playing_song_pre_next"/>
 
-                <Button
-                    android:id="@+id/playing_song_pre"
+                <ImageView
+                    android:id="@+id/btn_pre"
                     android:layout_width="@dimen/playing_song_pre_next_button_width"
                     android:layout_height="@dimen/playing_song_pre_next_button_height"
                     android:layout_gravity="center"
@@ -109,17 +116,20 @@
             </FrameLayout>
 
             <FrameLayout
+                android:id="@+id/playing_song_play_pause"
                 android:layout_width="@dimen/playing_song_play_pause"
                 android:layout_height="@dimen/playing_song_play_pause"
-                android:layout_centerInParent="true">
+                android:layout_centerInParent="true"
+                android:clickable="true">
 
                 <com.HandleStudio.lolmusic.lolmusic.CircleDrawView
+                    android:id="@+id/circle_draw_view_2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:diameter="@dimen/playing_song_play_pause"
                     />
-                <Button
-                    android:id="@+id/playing_song_play_pause"
+                <ImageView
+                    android:id="@+id/btn_play_pause"
                     android:layout_width="@dimen/playing_song_play_pause_button"
                     android:layout_height="@dimen/playing_song_play_pause_button"
                     android:background="@drawable/pause"
@@ -128,18 +138,21 @@
             </FrameLayout>
 
             <FrameLayout
+                android:id="@+id/playing_song_next"
                 android:layout_width="@dimen/playing_song_pre_next"
                 android:layout_height="@dimen/playing_song_pre_next"
                 android:layout_alignParentRight="true"
-                android:layout_centerVertical="true">
+                android:layout_centerVertical="true"
+                android:clickable="true">
 
                 <com.HandleStudio.lolmusic.lolmusic.CircleDrawView
+                    android:id="@+id/circle_draw_view_3"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:diameter="@dimen/playing_song_pre_next"
                     />
-                <Button
-                    android:id="@+id/playing_song_next"
+                <ImageView
+                    android:id="@+id/btn_next"
                     android:layout_width="@dimen/playing_song_pre_next_button_width"
                     android:layout_height="@dimen/playing_song_pre_next_button_height"
                     android:layout_marginLeft="@dimen/playing_song_pre_next_margin"

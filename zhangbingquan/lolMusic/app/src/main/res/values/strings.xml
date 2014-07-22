@@ -3,11 +3,9 @@
 
     <string name="app_name">lolMusic</string>
     <string name="action_settings">Settings</string>
-    <string name="now_playing_name">Small Apple</string>
     <string name="title_activity_playing">PlayingActivity</string>
 
-    <string name="test_text">ABCDEFG</string>
-    <string name="test_duration">03:50</string>
+    <string name="action_bar_title">%1$s</string>
 
 
 </resources>
